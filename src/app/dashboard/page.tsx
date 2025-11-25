@@ -38,9 +38,17 @@ export default function DashboardPage() {
                 <h1 className="text-3xl font-bold text-primary">
                     OSM Event Browser - Dashboard
                 </h1>
-                <Button onClick={handleLogout} variant="outline">
-                    Logout
-                </Button>
+                <div className="flex gap-2">
+                    <Button asChild variant="ghost" size="sm">
+                        <a href="/startup-data">Startup Data</a>
+                    </Button>
+                    <Button asChild variant="ghost" size="sm">
+                        <a href="/debug">Debug</a>
+                    </Button>
+                    <Button onClick={handleLogout} variant="outline">
+                        Logout
+                    </Button>
+                </div>
             </div>
 
             <div className="rounded-lg border p-6">
