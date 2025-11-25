@@ -50,10 +50,12 @@ async function handleOSMRequest(
         );
     }
 
-    // Construct OSM API URL
+    // Construct OSM API URL - pass through the path as-is
+    // Client calls /api/osm/v3/events/... which becomes https://osm.co.uk/v3/events/...
+    // Client calls /api/osm/ext/generic/... which becomes https://osm.co.uk/ext/generic/...
     const path = params.path.join("/");
     const searchParams = request.nextUrl.searchParams.toString();
-    const osmUrl = `${OSM_API_BASE_URL}/v3/${path}${searchParams ? `?${searchParams}` : ""
+    const osmUrl = `${OSM_API_BASE_URL}/${path}${searchParams ? `?${searchParams}` : ""
         }`;
 
     // Prepare request options

@@ -98,3 +98,21 @@ export async function isAuthenticated(): Promise<boolean> {
     const accessToken = await getAccessToken();
     return !!accessToken;
 }
+
+/**
+ * Get OSM startup data from cookies
+ */
+export async function getStartupData(): Promise<any | null> {
+    const cookieStore = await cookies();
+    const startupData = cookieStore.get("osm_startup_data");
+
+    if (!startupData?.value) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(startupData.value);
+    } catch {
+        return null;
+    }
+}

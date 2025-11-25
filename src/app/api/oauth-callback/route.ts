@@ -69,6 +69,33 @@ export async function GET(request: NextRequest) {
             });
         }
 
+        // Fetch startup data from OSM
+        try {
+            const timestamp = Date.now();
+            const startupUrl = `${process.env.OSM_API_BASE_URL}/ext/generic/startup/?action=getData&client_time=${timestamp}`;
+
+            const startupResponse = await fetch(startupUrl, {
+                headers: {
+                    Authorization: `Bearer ${tokens.access_token}`,
+                },
+            });
+
+            if (startupResponse.ok) {
+                const startupData = await startupResponse.json();
+                // Store startup data in a cookie for later use
+                cookieStore.set("osm_startup_data", JSON.stringify(startupData), {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === "production",
+                    sameSite: "lax",
+                    maxAge: 60 * 60, // 1 hour
+                    path: "/",
+                });
+            }
+        } catch (error) {
+            console.error("Failed to fetch startup data:", error);
+            // Don't fail the login if startup data fetch fails
+        }
+
         // Redirect to dashboard
         return NextResponse.redirect(new URL("/dashboard", request.url));
     } catch (error) {

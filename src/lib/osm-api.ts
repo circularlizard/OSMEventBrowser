@@ -1,5 +1,9 @@
 /**
  * Client-side helper for making requests to the OSM API via our proxy
+ * 
+ * Usage:
+ * - osmGet('v3/events') -> proxies to https://osm.co.uk/v3/events
+ * - osmGet('ext/generic/startup', { action: 'getData' }) -> proxies to https://osm.co.uk/ext/generic/startup?action=getData
  */
 
 export interface OSMApiResponse<T = any> {
