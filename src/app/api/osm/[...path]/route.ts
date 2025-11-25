@@ -53,7 +53,7 @@ async function handleOSMRequest(
     // Construct OSM API URL
     const path = params.path.join("/");
     const searchParams = request.nextUrl.searchParams.toString();
-    const osmUrl = `${OSM_API_BASE_URL}/api/${path}${searchParams ? `?${searchParams}` : ""
+    const osmUrl = `${OSM_API_BASE_URL}/v3/${path}${searchParams ? `?${searchParams}` : ""
         }`;
 
     // Prepare request options
