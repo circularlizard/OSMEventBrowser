@@ -111,5 +111,61 @@ async function handleOSMRequest(
 
     // Return the response from OSM API
     const data = await response.json();
+
+    // Monitor rate limit headers
+    const rateLimitLimit = response.headers.get("X-RateLimit-Limit");
+    const rateLimitRemaining = response.headers.get("X-RateLimit-Remaining");
+    const rateLimitReset = response.headers.get("X-RateLimit-Reset");
+
+    if (rateLimitLimit && rateLimitRemaining) {
+        console.log(
+            `[Rate Limit] ${rateLimitRemaining}/${rateLimitLimit} remaining, resets in ${rateLimitReset}s`
+        );
+
+        // Warn if approaching limit
+        const remaining = parseInt(rateLimitRemaining);
+        const limit = parseInt(rateLimitLimit);
+        if (remaining < limit * 0.1) {
+            console.warn(
+                `[Rate Limit Warning] Only ${remaining} requests remaining!`
+            );
+        }
+    }
+
+    // Check for deprecation warning
+    const deprecated = response.headers.get("X-Deprecated");
+    if (deprecated) {
+        console.warn(
+            `[API Deprecation Warning] This endpoint will be removed after: ${deprecated}`
+        );
+    }
+
+    // Check for blocked status
+    const blocked = response.headers.get("X-Blocked");
+    if (blocked) {
+        console.error(
+            `[API Blocked] Application has been blocked: ${blocked}`
+        );
+        return NextResponse.json(
+            { error: "Application has been blocked by OSM API" },
+            { status: 403 }
+        );
+    }
+
+    // Handle 429 Too Many Requests
+    if (response.status === 429) {
+        const retryAfter = response.headers.get("Retry-After");
+        console.error(
+            `[Rate Limit Exceeded] Retry after ${retryAfter} seconds`
+        );
+        return NextResponse.json(
+            {
+                error: "Rate limit exceeded",
+                retryAfter: retryAfter ? parseInt(retryAfter) : null
+            },
+            { status: 429 }
+        );
+    }
+
     return NextResponse.json(data, { status: response.status });
 }

@@ -21,7 +21,7 @@ export default async function Home({
 
     return `${baseUrl}/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
       redirectUri!
-    )}&response_type=code&scope=section:member:read`;
+    )}&response_type=code&scope=section:event:read section:member:read`;
   };
 
   return (
