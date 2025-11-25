@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/auth";
+import { parseOSMStartupData } from "@/lib/osm-parser";
 
 export async function GET(request: NextRequest) {
     const accessToken = await getAccessToken();
@@ -22,18 +23,24 @@ export async function GET(request: NextRequest) {
 
         console.log("[Debug Startup] Response status:", response.status);
 
-        const data = await response.json();
+        const responseText = await response.text();
+        console.log("[Debug Startup] Response text length:", responseText.length);
+        console.log("[Debug Startup] First 200 chars:", responseText.substring(0, 200));
+
+        // Parse the JavaScript response
+        const data = parseOSMStartupData(responseText);
 
         return NextResponse.json({
             status: response.status,
             url: startupUrl,
+            responseTextLength: responseText.length,
             dataSize: JSON.stringify(data).length,
             data,
         });
     } catch (error: any) {
         console.error("[Debug Startup] Error:", error);
         return NextResponse.json(
-            { error: error.message },
+            { error: error.message, stack: error.stack },
             { status: 500 }
         );
     }

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { parseOSMStartupData } from "@/lib/osm-parser";
 
 const OSM_TOKEN_URL = `${process.env.OSM_API_BASE_URL}/oauth/token`;
 
@@ -85,8 +86,12 @@ export async function GET(request: NextRequest) {
             console.log("[OAuth Callback] Startup response status:", startupResponse.status);
 
             if (startupResponse.ok) {
-                const startupData = await startupResponse.json();
-                console.log("[OAuth Callback] Startup data received, size:", JSON.stringify(startupData).length, "bytes");
+                const responseText = await startupResponse.text();
+                console.log("[OAuth Callback] Response text length:", responseText.length);
+
+                // Parse the JavaScript response (var data_holder = {...})
+                const startupData = parseOSMStartupData(responseText);
+                console.log("[OAuth Callback] Startup data parsed, size:", JSON.stringify(startupData).length, "bytes");
 
                 // Store startup data in a cookie for later use
                 cookieStore.set("osm_startup_data", JSON.stringify(startupData), {
