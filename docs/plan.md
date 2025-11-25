@@ -7,8 +7,8 @@ To build an OSM Event Browser.
 ## Proposed Changes
 
 ### Phase 1: Project Setup & Foundation
-- [ ] Initialize Next.js project with Tailwind CSS
-- [ ] Set up Shadcn/UI
+- [ ] Initialize Next.js project (enable Tailwind CSS)
+- [ ] Initialize shadcn/ui (configure `components.json`, Theme: Blue)
 - [ ] Configure project structure (api routes, components, lib)
 
 ### Phase 2: Authentication (OAuth 2.0)
