@@ -91,17 +91,37 @@ export async function GET(request: NextRequest) {
 
                 // Parse the JavaScript response (var data_holder = {...})
                 const startupData = parseOSMStartupData(responseText);
-                console.log("[OAuth Callback] Startup data parsed, size:", JSON.stringify(startupData).length, "bytes");
+                const dataSize = JSON.stringify(startupData).length;
+                console.log("[OAuth Callback] Startup data parsed, size:", dataSize, "bytes");
 
-                // Store startup data in a cookie for later use
-                cookieStore.set("osm_startup_data", JSON.stringify(startupData), {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === "production",
-                    sameSite: "lax",
-                    maxAge: 60 * 60, // 1 hour
-                    path: "/",
-                });
-                console.log("[OAuth Callback] Startup data stored in cookie");
+                // Cookies have a 4KB limit, so we'll store a flag and keep data in memory
+                // In production, you'd want to use Redis or a database
+                if (dataSize < 3000) {
+                    // Small enough for cookie
+                    cookieStore.set("osm_startup_data", JSON.stringify(startupData), {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === "production",
+                        sameSite: "lax",
+                        maxAge: 60 * 60, // 1 hour
+                        path: "/",
+                    });
+                    console.log("[OAuth Callback] Startup data stored in cookie");
+                } else {
+                    // Too large for cookie, store in global cache
+                    const { setStartupDataCache } = await import("@/lib/startup-cache");
+                    const userId = startupData.globals?.userid?.toString() || "unknown";
+                    setStartupDataCache(userId, startupData);
+
+                    // Store just the user ID in cookie
+                    cookieStore.set("osm_user_id", userId, {
+                        httpOnly: true,
+                        secure: process.env.NODE_ENV === "production",
+                        sameSite: "lax",
+                        maxAge: 60 * 60, // 1 hour
+                        path: "/",
+                    });
+                    console.log("[OAuth Callback] Startup data too large (", dataSize, "bytes), stored in cache for user:", userId);
+                }
             } else {
                 const errorText = await startupResponse.text();
                 console.error("[OAuth Callback] Startup data fetch failed:", startupResponse.status, errorText);

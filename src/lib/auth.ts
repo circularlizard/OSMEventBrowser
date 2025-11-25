@@ -100,19 +100,28 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 /**
- * Get OSM startup data from cookies
+ * Get OSM startup data from cookies or cache
  */
 export async function getStartupData(): Promise<any | null> {
     const cookieStore = await cookies();
+
+    // First try to get from cookie (for small datasets)
     const startupData = cookieStore.get("osm_startup_data");
 
-    if (!startupData?.value) {
-        return null;
+    if (startupData?.value) {
+        try {
+            return JSON.parse(startupData.value);
+        } catch {
+            // Fall through to cache
+        }
     }
 
-    try {
-        return JSON.parse(startupData.value);
-    } catch {
-        return null;
+    // If not in cookie, check cache (for large datasets)
+    const userId = cookieStore.get("osm_user_id");
+    if (userId?.value) {
+        const { getStartupDataCache } = await import("@/lib/startup-cache");
+        return getStartupDataCache(userId.value);
     }
+
+    return null;
 }
