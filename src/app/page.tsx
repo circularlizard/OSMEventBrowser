@@ -1,65 +1,54 @@
-import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { isAuthenticated } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const authenticated = await isAuthenticated();
+  const params = await searchParams;
+
+  if (authenticated) {
+    redirect("/dashboard");
+  }
+
+  const getOAuthUrl = () => {
+    const baseUrl = process.env.OSM_API_BASE_URL;
+    const clientId = process.env.OSM_CLIENT_ID;
+    const redirectUri = process.env.OSM_REDIRECT_URI;
+
+    return `${baseUrl}/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
+      redirectUri!
+    )}&response_type=code&scope=section:member:read`;
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex h-screen w-full flex-col items-center justify-center gap-6 p-4">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <h1 className="text-4xl font-bold text-primary">OSM Event Browser</h1>
+        <p className="max-w-md text-muted-foreground">
+          Connect to Online Scout Manager to browse and manage your events.
+        </p>
+      </div>
+
+      {params.error && (
+        <div className="rounded-md border border-destructive bg-destructive/10 p-4 text-sm text-destructive">
+          <p>
+            <strong>Error:</strong> {params.error.replace(/_/g, " ")}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
+
+      <div className="flex flex-col gap-3">
+        <Button asChild size="lg">
+          <a href={getOAuthUrl()}>Sign in with OSM</a>
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          You will be redirected to Online Scout Manager to authorize this app.
+        </p>
+      </div>
     </div>
   );
 }
