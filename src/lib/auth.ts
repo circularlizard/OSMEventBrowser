@@ -107,21 +107,30 @@ export async function getStartupData(): Promise<any | null> {
 
     // First try to get from cookie (for small datasets)
     const startupData = cookieStore.get("osm_startup_data");
+    console.log("[getStartupData] Cookie data exists:", !!startupData?.value);
 
     if (startupData?.value) {
         try {
-            return JSON.parse(startupData.value);
-        } catch {
+            const parsed = JSON.parse(startupData.value);
+            console.log("[getStartupData] Returning data from cookie");
+            return parsed;
+        } catch (error) {
+            console.error("[getStartupData] Failed to parse cookie data:", error);
             // Fall through to cache
         }
     }
 
     // If not in cookie, check cache (for large datasets)
     const userId = cookieStore.get("osm_user_id");
+    console.log("[getStartupData] User ID cookie:", userId?.value);
+
     if (userId?.value) {
         const { getStartupDataCache } = await import("@/lib/startup-cache");
-        return getStartupDataCache(userId.value);
+        const cacheData = getStartupDataCache(userId.value);
+        console.log("[getStartupData] Cache data exists:", !!cacheData);
+        return cacheData;
     }
 
+    console.log("[getStartupData] No data found in cookie or cache");
     return null;
 }
