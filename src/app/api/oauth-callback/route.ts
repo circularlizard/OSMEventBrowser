@@ -74,14 +74,20 @@ export async function GET(request: NextRequest) {
             const timestamp = Date.now();
             const startupUrl = `${process.env.OSM_API_BASE_URL}/ext/generic/startup/?action=getData&client_time=${timestamp}`;
 
+            console.log("[OAuth Callback] Fetching startup data from:", startupUrl);
+
             const startupResponse = await fetch(startupUrl, {
                 headers: {
                     Authorization: `Bearer ${tokens.access_token}`,
                 },
             });
 
+            console.log("[OAuth Callback] Startup response status:", startupResponse.status);
+
             if (startupResponse.ok) {
                 const startupData = await startupResponse.json();
+                console.log("[OAuth Callback] Startup data received, size:", JSON.stringify(startupData).length, "bytes");
+
                 // Store startup data in a cookie for later use
                 cookieStore.set("osm_startup_data", JSON.stringify(startupData), {
                     httpOnly: true,
@@ -90,9 +96,13 @@ export async function GET(request: NextRequest) {
                     maxAge: 60 * 60, // 1 hour
                     path: "/",
                 });
+                console.log("[OAuth Callback] Startup data stored in cookie");
+            } else {
+                const errorText = await startupResponse.text();
+                console.error("[OAuth Callback] Startup data fetch failed:", startupResponse.status, errorText);
             }
         } catch (error) {
-            console.error("Failed to fetch startup data:", error);
+            console.error("[OAuth Callback] Failed to fetch startup data:", error);
             // Don't fail the login if startup data fetch fails
         }
 

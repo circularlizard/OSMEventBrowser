@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 export default async function StartupDataPage() {
     const startupData = await getStartupData();
 
+    console.log("[Startup Data Page] Data exists:", !!startupData);
+    if (startupData) {
+        console.log("[Startup Data Page] Data keys:", Object.keys(startupData));
+    }
+
     if (!startupData) {
         redirect("/dashboard");
     }
@@ -26,13 +31,13 @@ export default async function StartupDataPage() {
                 <h2 className="mb-4 text-xl font-semibold">User Information</h2>
                 <div className="space-y-2 text-sm">
                     <p>
-                        <strong>User ID:</strong> {startupData.globals?.userid}
+                        <strong>User ID:</strong> {String(startupData.globals?.userid || "N/A")}
                     </p>
                     <p>
-                        <strong>Name:</strong> {startupData.globals?.fullname}
+                        <strong>Name:</strong> {String(startupData.globals?.fullname || "N/A")}
                     </p>
                     <p>
-                        <strong>Email:</strong> {startupData.globals?.email}
+                        <strong>Email:</strong> {String(startupData.globals?.email || "N/A")}
                     </p>
                 </div>
             </div>
@@ -67,7 +72,7 @@ export default async function StartupDataPage() {
                                                     key={key}
                                                     className="rounded bg-primary/10 px-2 py-1"
                                                 >
-                                                    {key}: {value}
+                                                    {key}: {String(value)}
                                                 </span>
                                             )
                                     )}
