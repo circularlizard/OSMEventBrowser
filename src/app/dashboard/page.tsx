@@ -34,24 +34,30 @@ export default function DashboardPage() {
                 const response = await fetch("/api/debug-startup");
                 const result = await response.json();
 
+                console.log("[Dashboard] Startup data result:", result);
+
                 if (result.data) {
                     setStartupData(result.data);
 
                     // Extract sections
                     const extractedSections = extractSections(result.data);
+                    console.log("[Dashboard] Extracted sections:", extractedSections);
                     setSections(extractedSections);
 
                     // Set default section
                     const defaultSection = getDefaultSection(result.data);
+                    console.log("[Dashboard] Default section:", defaultSection);
                     if (defaultSection) {
                         setSelectedSection(defaultSection);
 
                         // Extract terms for default section
                         const sectionTerms = extractTermsForSection(result.data, defaultSection.sectionId);
+                        console.log("[Dashboard] Terms for section", defaultSection.sectionId, ":", sectionTerms);
                         setTerms(sectionTerms);
 
                         // Set current term
                         const currentTerm = getCurrentTerm(result.data, defaultSection.sectionId);
+                        console.log("[Dashboard] Current term:", currentTerm);
                         setSelectedTerm(currentTerm);
                     }
                 }
@@ -64,16 +70,21 @@ export default function DashboardPage() {
     }, []);
 
     const handleSectionChange = (sectionId: string) => {
+        console.log("[Dashboard] Section changed to:", sectionId);
         const section = sections.find((s) => s.sectionId === sectionId);
+        console.log("[Dashboard] Found section:", section);
+
         if (section && startupData) {
             setSelectedSection(section);
 
             // Update terms for new section
             const sectionTerms = extractTermsForSection(startupData, sectionId);
+            console.log("[Dashboard] Terms for new section:", sectionTerms);
             setTerms(sectionTerms);
 
             // Set current term for new section
             const currentTerm = getCurrentTerm(startupData, sectionId);
+            console.log("[Dashboard] Current term for new section:", currentTerm);
             setSelectedTerm(currentTerm);
         }
     };

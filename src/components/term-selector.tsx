@@ -20,6 +20,8 @@ export function TermSelector({
     selectedTermId,
     onTermChange,
 }: TermSelectorProps) {
+    console.log("[TermSelector] Rendering with terms:", terms, "selectedTermId:", selectedTermId);
+
     if (terms.length === 0) {
         return (
             <div className="text-sm text-muted-foreground">
