@@ -7,14 +7,11 @@ import { getEvents, getEventAttendance, type OSMEvent, type OSMAttendance } from
 import {
   extractSections,
   getCurrentTerm,
-  getAllCurrentTerms,
   getDefaultSection,
-  extractTermsForSection,
   type OSMSection,
   type OSMTerm,
 } from "@/lib/osm/data-helpers";
 import { SectionSelector } from "@/components/osm/section-selector";
-import { TermSelector } from "@/components/osm/term-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,7 +19,7 @@ export default function DashboardPage() {
     const [startupData, setStartupData] = useState<any>(null);
     const [sections, setSections] = useState<OSMSection[]>([]);
     const [selectedSection, setSelectedSection] = useState<OSMSection | null>(null);
-    const [terms, setTerms] = useState<OSMTerm[]>([]);
+    // Terms state removed as we don't need to display them
     const [selectedTerm, setSelectedTerm] = useState<OSMTerm | null>(null);
 
     // Events State
@@ -58,11 +55,7 @@ export default function DashboardPage() {
                     if (defaultSection) {
                         setSelectedSection(defaultSection);
 
-                        // Extract terms for default section
-                        const sectionTerms = extractTermsForSection(result.data, defaultSection.sectionId);
-                        setTerms(sectionTerms);
-
-                        // Set current term
+                        // Set current term directly
                         const currentTerm = getCurrentTerm(result.data, defaultSection.sectionId);
                         setSelectedTerm(currentTerm);
                     }
@@ -127,25 +120,19 @@ export default function DashboardPage() {
     }, [selectedEvent, selectedSection, selectedTerm]);
 
     const handleSectionChange = (sectionId: string) => {
+        console.log("[Dashboard] Section changing to:", sectionId);
         const section = sections.find((s) => s.sectionId === sectionId);
 
         if (section && startupData) {
+            console.log("[Dashboard] Found section:", section);
             setSelectedSection(section);
 
-            // Update terms for new section
-            const sectionTerms = extractTermsForSection(startupData, sectionId);
-            setTerms(sectionTerms);
-
-            // Set current term for new section
+            // Set current term for new section directly
             const currentTerm = getCurrentTerm(startupData, sectionId);
+            console.log("[Dashboard] Found current term:", currentTerm);
             setSelectedTerm(currentTerm);
-        }
-    };
-
-    const handleTermChange = (termId: string) => {
-        const term = terms.find((t) => t.termId === termId);
-        if (term) {
-            setSelectedTerm(term);
+        } else {
+            console.warn("[Dashboard] Could not find section or startupData missing", { section, hasStartupData: !!startupData });
         }
     };
 
@@ -155,58 +142,59 @@ export default function DashboardPage() {
     };
 
     return (
-        <div className="flex min-h-screen w-full flex-col gap-6 p-8">
-            <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-primary">
-                    OSM Event Browser - Dashboard
-                </h1>
-                <div className="flex gap-2">
-                    <Button asChild variant="ghost" size="sm">
+        <div className="flex min-h-screen w-full flex-col">
+            <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-primary/50 bg-gradient-to-r from-primary to-primary/80 px-6 py-4 shadow-lg">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-foreground/10 text-primary-foreground">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+                            <circle cx="12" cy="12" r="10" />
+                            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" stroke="none" />
+                        </svg>
+                    </div>
+                    <h1 className="text-2xl font-bold text-primary-foreground">
+                        OSM Event Browser
+                    </h1>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <Button asChild variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground">
                         <a href="/startup-data">Startup Data</a>
                     </Button>
-                    <Button asChild variant="ghost" size="sm">
+                    <Button asChild variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground">
                         <a href="/debug">Debug</a>
                     </Button>
-                    <Button asChild variant="ghost" size="sm">
+                    <Button asChild variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 hover:text-primary-foreground">
                         <a href="/debug/api-browser">API Browser</a>
                     </Button>
-                    <Button onClick={handleLogout} variant="outline">
+                    <Button onClick={handleLogout} variant="secondary" className="text-secondary-foreground">
                         Logout
                     </Button>
                 </div>
-            </div>
+            </header>
 
-            {/* Section and Term Selectors */}
-            <div className="rounded-lg border p-6">
-                <h2 className="mb-4 text-xl font-semibold">Section & Term Selection</h2>
-                <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                        <label className="mb-2 block text-sm font-medium">Section</label>
+            <main className="flex flex-1 flex-col gap-6 p-8">
+
+            {/* Section Selection */}
+            <div className="flex items-center justify-between rounded-lg border bg-card p-4 shadow-sm">
+                <div className="flex flex-1 items-center gap-4">
+                    <label className="text-sm font-medium whitespace-nowrap">Select Section:</label>
+                    <div className="w-full max-w-xs">
                         <SectionSelector
                             sections={sections}
                             selectedSectionId={selectedSection?.sectionId || null}
                             onSectionChange={handleSectionChange}
                         />
-                        {selectedSection && (
-                            <div className="mt-2 text-xs text-muted-foreground">
-                                ID: <code className="bg-muted px-1 py-0.5 rounded">{selectedSection.sectionId}</code>
-                            </div>
-                        )}
                     </div>
-                    <div>
-                        <label className="mb-2 block text-sm font-medium">Term</label>
-                        <TermSelector
-                            terms={terms}
-                            selectedTermId={selectedTerm?.termId || null}
-                            onTermChange={handleTermChange}
-                        />
-                        {selectedTerm && (
-                            <div className="mt-2 text-xs text-muted-foreground">
-                                ID: <code className="bg-muted px-1 py-0.5 rounded">{selectedTerm.termId}</code>
-                            </div>
-                        )}
-                    </div>
+                    {selectedSection && (
+                        <div className="text-xs text-muted-foreground hidden md:block">
+                            ID: <code className="bg-muted px-1 py-0.5 rounded">{selectedSection.sectionId}</code>
+                        </div>
+                    )}
                 </div>
+                {selectedTerm && (
+                    <div className="text-sm text-muted-foreground">
+                        Current Term: <span className="font-medium text-foreground">{selectedTerm.name}</span>
+                    </div>
+                )}
             </div>
 
             {/* Events Browser */}
@@ -305,6 +293,7 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
             </div>
-        </div>
+        </main>
+    </div>
     );
 }

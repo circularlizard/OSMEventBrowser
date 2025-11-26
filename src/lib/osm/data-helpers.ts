@@ -63,15 +63,21 @@ export function extractTermsForSection(
 }
 
 /**
- * Get current term for a section (first non-past term)
+ * Get current term for a section (first non-past term, or the last term if all are past)
  */
 export function getCurrentTerm(
     startupData: any,
     sectionId: string
 ): OSMTerm | null {
     const terms = extractTermsForSection(startupData, sectionId);
+    
+    // First try to find a current/future term
     const currentTerm = terms.find((term) => !term.isPast);
-    return currentTerm || null;
+    if (currentTerm) return currentTerm;
+
+    // Fallback: return the last term (usually the most recent past term)
+    // Terms are typically returned in chronological order, so the last one is the newest
+    return terms.length > 0 ? terms[terms.length - 1] : null;
 }
 
 /**
