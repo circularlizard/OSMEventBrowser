@@ -45,11 +45,14 @@ export function extractTermsForSection(
     startupData: any,
     sectionId: string
 ): OSMTerm[] {
-    if (!startupData?.terms?.[sectionId]) {
+    // Terms are nested under globals.terms, not at the root level
+    const termsData = startupData?.globals?.terms?.[sectionId] || startupData?.terms?.[sectionId];
+
+    if (!termsData) {
         return [];
     }
 
-    return startupData.terms[sectionId].map((term: any) => ({
+    return termsData.map((term: any) => ({
         termId: term.termid,
         sectionId: term.sectionid,
         name: term.name,

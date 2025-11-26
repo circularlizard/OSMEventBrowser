@@ -51,6 +51,10 @@ export default function DashboardPage() {
                         setSelectedSection(defaultSection);
 
                         // Extract terms for default section
+                        console.log("[Dashboard] result.data keys:", Object.keys(result.data));
+                        console.log("[Dashboard] result.data.globals.terms:", result.data.globals?.terms);
+                        console.log("[Dashboard] result.data.terms:", result.data.terms);
+                        console.log("[Dashboard] Looking for terms[" + defaultSection.sectionId + "]");
                         const sectionTerms = extractTermsForSection(result.data, defaultSection.sectionId);
                         console.log("[Dashboard] Terms for section", defaultSection.sectionId, ":", sectionTerms);
                         setTerms(sectionTerms);

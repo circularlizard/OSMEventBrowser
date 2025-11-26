@@ -4,11 +4,6 @@ import { redirect } from "next/navigation";
 export default async function StartupDataPage() {
     const startupData = await getStartupData();
 
-    console.log("[Startup Data Page] Data exists:", !!startupData);
-    if (startupData) {
-        console.log("[Startup Data Page] Data keys:", Object.keys(startupData));
-    }
-
     if (!startupData) {
         redirect("/dashboard");
     }
