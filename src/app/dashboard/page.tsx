@@ -1,15 +1,89 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SectionSelector } from "@/components/section-selector";
+import { TermSelector } from "@/components/term-selector";
 import { osmGet } from "@/lib/osm-api";
+import {
+    extractSections,
+    extractTermsForSection,
+    getCurrentTerm,
+    getDefaultSection,
+    type OSMSection,
+    type OSMTerm,
+} from "@/lib/osm-data-helpers";
 
 export default function DashboardPage() {
+    const [startupData, setStartupData] = useState<any>(null);
+    const [sections, setSections] = useState<OSMSection[]>([]);
+    const [selectedSection, setSelectedSection] = useState<OSMSection | null>(null);
+    const [terms, setTerms] = useState<OSMTerm[]>([]);
+    const [selectedTerm, setSelectedTerm] = useState<OSMTerm | null>(null);
+
     const [apiPath, setApiPath] = useState("sections");
     const [loading, setLoading] = useState(false);
     const [response, setResponse] = useState<any>(null);
     const [error, setError] = useState<string | null>(null);
+
+    // Fetch startup data on mount
+    useEffect(() => {
+        async function fetchStartupData() {
+            try {
+                const response = await fetch("/api/debug-startup");
+                const result = await response.json();
+
+                if (result.data) {
+                    setStartupData(result.data);
+
+                    // Extract sections
+                    const extractedSections = extractSections(result.data);
+                    setSections(extractedSections);
+
+                    // Set default section
+                    const defaultSection = getDefaultSection(result.data);
+                    if (defaultSection) {
+                        setSelectedSection(defaultSection);
+
+                        // Extract terms for default section
+                        const sectionTerms = extractTermsForSection(result.data, defaultSection.sectionId);
+                        setTerms(sectionTerms);
+
+                        // Set current term
+                        const currentTerm = getCurrentTerm(result.data, defaultSection.sectionId);
+                        setSelectedTerm(currentTerm);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch startup data:", error);
+            }
+        }
+
+        fetchStartupData();
+    }, []);
+
+    const handleSectionChange = (sectionId: string) => {
+        const section = sections.find((s) => s.sectionId === sectionId);
+        if (section && startupData) {
+            setSelectedSection(section);
+
+            // Update terms for new section
+            const sectionTerms = extractTermsForSection(startupData, sectionId);
+            setTerms(sectionTerms);
+
+            // Set current term for new section
+            const currentTerm = getCurrentTerm(startupData, sectionId);
+            setSelectedTerm(currentTerm);
+        }
+    };
+
+    const handleTermChange = (termId: string) => {
+        const term = terms.find((t) => t.termId === termId);
+        if (term) {
+            setSelectedTerm(term);
+        }
+    };
 
     const testApi = async () => {
         setLoading(true);
@@ -51,6 +125,50 @@ export default function DashboardPage() {
                 </div>
             </div>
 
+            {/* Section and Term Selectors */}
+            <div className="rounded-lg border p-6">
+                <h2 className="mb-4 text-xl font-semibold">Section & Term Selection</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label className="mb-2 block text-sm font-medium">Section</label>
+                        <SectionSelector
+                            sections={sections}
+                            selectedSectionId={selectedSection?.sectionId || null}
+                            onSectionChange={handleSectionChange}
+                        />
+                        {selectedSection && (
+                            <div className="mt-2 text-xs text-muted-foreground">
+                                Type: {selectedSection.sectionType}
+                                {selectedSection.isDefault && " (Default)"}
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="mb-2 block text-sm font-medium">Term</label>
+                        <TermSelector
+                            terms={terms}
+                            selectedTermId={selectedTerm?.termId || null}
+                            onTermChange={handleTermChange}
+                        />
+                        {selectedTerm && (
+                            <div className="mt-2 text-xs text-muted-foreground">
+                                {selectedTerm.startDate} to {selectedTerm.endDate}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {selectedSection && selectedTerm && (
+                    <div className="mt-4 rounded-md bg-muted p-3 text-sm">
+                        <strong>Selected:</strong> {selectedSection.sectionName} - {selectedTerm.name}
+                        <div className="mt-1 text-xs text-muted-foreground">
+                            Section ID: {selectedSection.sectionId} | Term ID: {selectedTerm.termId}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* API Discovery Utility */}
             <div className="rounded-lg border p-6">
                 <h2 className="mb-4 text-xl font-semibold">API Discovery Utility</h2>
                 <p className="mb-4 text-sm text-muted-foreground">
@@ -63,8 +181,12 @@ export default function DashboardPage() {
                         <Input
                             placeholder="Enter API path (e.g., sections, events)"
                             value={apiPath}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setApiPath(e.target.value)}
-                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === "Enter" && testApi()}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                setApiPath(e.target.value)
+                            }
+                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+                                e.key === "Enter" && testApi()
+                            }
                         />
                     </div>
                     <Button onClick={testApi} disabled={loading || !apiPath}>

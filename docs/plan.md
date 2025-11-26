@@ -43,7 +43,24 @@ The OSM API enforces rate limits per authenticated user. The application must:
 - [x] Check for X-Blocked and X-Deprecated headers
 - [x] Create client-side API helpers
 
-### Phase 4: Frontend Development
+### Phase 4: API Refinement & Data Extraction
+- [ ] Extract section and term data from user data
+    - [ ] Identify correct API endpoint(s) for user sections
+    - [ ] Parse section structure and available terms
+    - [ ] Handle multiple sections if applicable
+- [ ] Implement events API integration
+    - [ ] Determine correct events API endpoint
+    - [ ] Test with different section/term combinations
+    - [ ] Validate event data structure
+- [ ] Implement participant/attendance data retrieval
+    - [ ] Identify endpoint for event participants
+    - [ ] Test participant data structure
+    - [ ] Ensure data completeness for attendance tracking
+
+> [!NOTE]
+> This phase involves iterative exploration of the poorly documented OSM API. Each sub-task may require multiple attempts to identify the correct endpoints and data structures.
+
+### Phase 5: Frontend Development
 - [x] Create Dashboard layout with API Discovery Utility
 - [ ] Build Event Browser UI
     - [ ] List events with filtering/sorting
@@ -52,7 +69,7 @@ The OSM API enforces rate limits per authenticated user. The application must:
 - [ ] Implement proper error handling and loading states
 - [ ] Add responsive design for mobile
 
-### Phase 5: Data Export
+### Phase 6: Data Export
 - [ ] Implement PDF Export (`pdfkit` or `puppeteer`)
     - [ ] Event summary reports
     - [ ] Attendance reports
