@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { parseOSMStartupData } from "@/lib/osm-parser";
+import { parseOSMStartupData } from "@/lib/osm/parser";
 
 const OSM_TOKEN_URL = `${process.env.OSM_API_BASE_URL}/oauth/token`;
 

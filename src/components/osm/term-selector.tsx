@@ -7,7 +7,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { OSMTerm } from "@/lib/osm-data-helpers";
+import { OSMTerm } from "@/lib/osm/data-helpers";
 
 interface TermSelectorProps {
     terms: OSMTerm[];
@@ -20,8 +20,6 @@ export function TermSelector({
     selectedTermId,
     onTermChange,
 }: TermSelectorProps) {
-    console.log("[TermSelector] Rendering with terms:", terms, "selectedTermId:", selectedTermId);
-
     if (terms.length === 0) {
         return (
             <div className="text-sm text-muted-foreground">

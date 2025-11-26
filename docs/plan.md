@@ -4,9 +4,10 @@
 To build an OSM Event Browser with read access to events and member data.
 
 ## OAuth Scopes
-The application requests the following OAuth scopes:
-- `section:event:read` - Read access to events
-- `section:member:read` - Read access to member personal details
+The application requests the following OAuth scopes (using **dot notation**):
+- `section.event:read` - Read access to events
+- `section.member:read` - Read access to member personal details
+- `section.programme:read` - Read access to programme data
 
 ## API Rate Limiting
 The OSM API enforces rate limits per authenticated user. The application must:
@@ -31,7 +32,7 @@ The OSM API enforces rate limits per authenticated user. The application must:
     - Store tokens in HTTP-Only cookies
 - [x] Implement Token Refresh logic
 - [x] Create helper functions for cookie management
-- [x] Request correct OAuth scopes (event:read, member:read)
+- [x] Request correct OAuth scopes (section.event:read, section.member:read, section.programme:read)
 
 ### Phase 3: API Proxy Layer ✅
 - [x] Create generic proxy handler `/api/osm/[...path]`
@@ -43,22 +44,22 @@ The OSM API enforces rate limits per authenticated user. The application must:
 - [x] Check for X-Blocked and X-Deprecated headers
 - [x] Create client-side API helpers
 
-### Phase 4: API Refinement & Data Extraction
-- [ ] Extract section and term data from user data
-    - [ ] Identify correct API endpoint(s) for user sections
-    - [ ] Parse section structure and available terms
-    - [ ] Handle multiple sections if applicable
-- [ ] Implement events API integration
-    - [ ] Determine correct events API endpoint
-    - [ ] Test with different section/term combinations
-    - [ ] Validate event data structure
-- [ ] Implement participant/attendance data retrieval
-    - [ ] Identify endpoint for event participants
-    - [ ] Test participant data structure
-    - [ ] Ensure data completeness for attendance tracking
+### Phase 4: API Refinement & Data Extraction ✅
+- [x] Extract section and term data
+    - [x] Implement `getTerms` to retrieve terms for all sections (Used startup data extraction)
+    - [x] Implement logic to identify the *current* term (required for other API calls)
+    - [x] Store/Cache `termid` for use in subsequent requests (Managed via React state)
+- [x] Implement events API integration
+    - [x] Target endpoint: `ext/events/summary/?action=getEvents` (requires `sectionid` + `termid`)
+    - [x] Verify response structure (expecting `items` array)
+    - [x] Handle rate limiting headers (`X-RateLimit-*`) (Handled by proxy)
+- [x] Implement participant/attendance data retrieval
+    - [x] Target endpoint: `ext/events/summary/?action=getAttendance` (requires `sectionid` + `termid` + `eventid`)
+    - [x] Verify attendance data structure
+    - [x] Ensure member details are sufficient (or if `getMembersGrid` is needed)
 
 > [!NOTE]
-> This phase involves iterative exploration of the poorly documented OSM API. Each sub-task may require multiple attempts to identify the correct endpoints and data structures.
+> Analysis of reference implementation shows that `termid` is critical for almost all OSM API calls. We must successfully fetch and identify the current term before we can fetch events or attendance.
 
 ### Phase 5: Frontend Development
 - [x] Create Dashboard layout with API Discovery Utility

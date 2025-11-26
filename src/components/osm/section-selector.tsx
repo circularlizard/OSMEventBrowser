@@ -7,7 +7,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { OSMSection } from "@/lib/osm-data-helpers";
+import { OSMSection } from "@/lib/osm/data-helpers";
 
 interface SectionSelectorProps {
     sections: OSMSection[];

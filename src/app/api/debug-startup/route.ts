@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/auth";
-import { parseOSMStartupData } from "@/lib/osm-parser";
+import { parseOSMStartupData } from "@/lib/osm/parser";
 
 export async function GET(request: NextRequest) {
     const accessToken = await getAccessToken();

@@ -8,7 +8,7 @@ export default function DebugPage() {
 
     const oauthUrl = `${baseUrl}/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(
         redirectUri!
-    )}&response_type=code&scope=section:member:read`;
+    )}&response_type=code&scope=section:member:read section:event:read section:programme:read`;
 
     return (
         <div className="flex min-h-screen w-full flex-col items-center justify-center gap-6 p-4">
