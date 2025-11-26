@@ -59,6 +59,7 @@ All requests to the poorly documented OSM REST API **MUST** be proxied through a
 
 1. All client-side components **SHOULD** only communicate with internal API routes (e.g., /api/osm/events), never directly with the external OSM API domain.  
 2. The proxy route **MUST** read the access\_token from the secure HTTP-Only cookie.
+3. The proxy **MUST** handle OSM API quirks, specifically ensuring that endpoints under `ext/` have a trailing slash (e.g., `ext/events/summary/`), otherwise the upstream API returns 404 or 403 errors.
 
 ### **B. Token Refresh Logic**
 
@@ -84,3 +85,24 @@ All data export functionality **MUST** be handled by dedicated serverless API ro
 | **Spreadsheet** | Use a lightweight Node.js library (or simple string construction) to generate CSV or XLSX data on the server. The route must set the appropriate Content-Disposition: attachment header to trigger a download. |
 | **Data Source** | Export routes **MUST** use the API Proxy layer to fetch the necessary OSM data, ensuring the token refresh logic is applied before data retrieval. |
 
+## **V. Code Organization & Best Practices**
+
+To ensure maintainability and scalability, the codebase follows specific organizational patterns.
+
+### **A. Domain-Driven Directory Structure**
+
+Code related to specific domains (e.g., OSM integration) **MUST** be grouped together rather than scattered by file type.
+
+1.  **Library Logic (`src/lib/osm/`)**:
+    *   `api.ts`: Low-level client wrapper for the internal API proxy.
+    *   `services.ts`: High-level business logic functions (e.g., `getEvents`) that type-cast responses and handle specific endpoint logic.
+    *   `data-helpers.ts`: Pure functions for extracting and transforming data (e.g., `extractSections`) from raw API responses.
+    *   `parser.ts`: Specialized parsers for non-standard API responses (e.g., OSM's JS variable assignment format).
+
+2.  **Components (`src/components/osm/`)**:
+    *   UI components specific to the OSM domain (e.g., `SectionSelector`, `TermSelector`) reside here, separate from generic UI components in `src/components/ui`.
+
+### **B. API Interaction Patterns**
+
+1.  **Service Layer Access**: Components **SHOULD NOT** call `osmGet` (from `api.ts`) directly. They should use strongly-typed functions from `services.ts`.
+2.  **Debugging Tools**: A dedicated API Browser (`/debug/api-browser`) is maintained to facilitate exploring the undocumented API. This tool allows developers to test endpoints and inspect raw responses without modifying application code.
