@@ -50,12 +50,23 @@ async function handleOSMRequest(
         );
     }
 
-    // Construct OSM API URL - pass through the path as-is
-    // Client calls /api/osm/v3/events/... which becomes https://osm.co.uk/v3/events/...
-    // Client calls /api/osm/ext/generic/... which becomes https://osm.co.uk/ext/generic/...
-    const path = params.path.join("/");
+    // Construct OSM API URL
+    // We use request.nextUrl.pathname to preserve trailing slashes, which are significant for OSM API
+    const pathname = request.nextUrl.pathname;
+    console.log("[Proxy Debug] Incoming Pathname:", pathname);
+
+    // Strip the "/api/osm/" prefix to get the raw path
+    let apiPath = pathname.replace(/^\/api\/osm\//, "");
+
+    // FORCE TRAILING SLASH for 'ext/' routes if missing (OSM API Requirement)
+    // e.g., "ext/events/summary" -> "ext/events/summary/"
+    if (apiPath.startsWith("ext/") && !apiPath.endsWith("/")) {
+        console.log("[Proxy Debug] Adding missing trailing slash to ext/ route");
+        apiPath += "/";
+    }
+
     const searchParams = request.nextUrl.searchParams.toString();
-    const osmUrl = `${OSM_API_BASE_URL}/${path}${searchParams ? `?${searchParams}` : ""
+    const osmUrl = `${OSM_API_BASE_URL}/${apiPath}${searchParams ? `?${searchParams}` : ""
         }`;
 
     // Prepare request options
@@ -75,6 +86,8 @@ async function handleOSMRequest(
     }
 
     // Make the request to OSM API
+    console.log("[Proxy] Calling OSM API:", osmUrl);
+    console.log("[Proxy] Authorization header:", accessToken ? `Bearer ${accessToken.substring(0, 20)}...` : "MISSING");
     let response = await fetch(osmUrl, {
         method,
         headers,
@@ -169,5 +182,7 @@ async function handleOSMRequest(
         );
     }
 
-    return NextResponse.json(data, { status: response.status });
+    const responseData = NextResponse.json(data, { status: response.status });
+    responseData.headers.set("X-Debug-Target-URL", osmUrl);
+    return responseData;
 }

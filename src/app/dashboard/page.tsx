@@ -2,18 +2,21 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SectionSelector } from "@/components/section-selector";
-import { TermSelector } from "@/components/term-selector";
-import { osmGet } from "@/lib/osm-api";
+import { osmGet } from "@/lib/osm/api";
+import { getEvents, getEventAttendance, type OSMEvent, type OSMAttendance } from "@/lib/osm/services";
 import {
-    extractSections,
-    extractTermsForSection,
-    getCurrentTerm,
-    getDefaultSection,
-    type OSMSection,
-    type OSMTerm,
-} from "@/lib/osm-data-helpers";
+  extractSections,
+  getCurrentTerm,
+  getAllCurrentTerms,
+  getDefaultSection,
+  extractTermsForSection,
+  type OSMSection,
+  type OSMTerm,
+} from "@/lib/osm/data-helpers";
+import { SectionSelector } from "@/components/osm/section-selector";
+import { TermSelector } from "@/components/osm/term-selector";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function DashboardPage() {
     const [startupData, setStartupData] = useState<any>(null);
@@ -22,46 +25,45 @@ export default function DashboardPage() {
     const [terms, setTerms] = useState<OSMTerm[]>([]);
     const [selectedTerm, setSelectedTerm] = useState<OSMTerm | null>(null);
 
-    const [apiPath, setApiPath] = useState("sections");
-    const [loading, setLoading] = useState(false);
-    const [response, setResponse] = useState<any>(null);
-    const [error, setError] = useState<string | null>(null);
+    // Events State
+    const [events, setEvents] = useState<OSMEvent[]>([]);
+    const [eventsLoading, setEventsLoading] = useState(false);
+    const [eventsError, setEventsError] = useState<string | null>(null);
+    const [selectedEvent, setSelectedEvent] = useState<OSMEvent | null>(null);
+
+    // Attendance State
+    const [attendance, setAttendance] = useState<OSMAttendance[]>([]);
+    const [attendanceLoading, setAttendanceLoading] = useState(false);
+    const [attendanceError, setAttendanceError] = useState<string | null>(null);
 
     // Fetch startup data on mount
     useEffect(() => {
         async function fetchStartupData() {
             try {
+                // Debug imports
+                console.log("Imports loaded:", { extractSections, getDefaultSection });
+                
                 const response = await fetch("/api/debug-startup");
                 const result = await response.json();
-
-                console.log("[Dashboard] Startup data result:", result);
 
                 if (result.data) {
                     setStartupData(result.data);
 
                     // Extract sections
                     const extractedSections = extractSections(result.data);
-                    console.log("[Dashboard] Extracted sections:", extractedSections);
                     setSections(extractedSections);
 
                     // Set default section
                     const defaultSection = getDefaultSection(result.data);
-                    console.log("[Dashboard] Default section:", defaultSection);
                     if (defaultSection) {
                         setSelectedSection(defaultSection);
 
                         // Extract terms for default section
-                        console.log("[Dashboard] result.data keys:", Object.keys(result.data));
-                        console.log("[Dashboard] result.data.globals.terms:", result.data.globals?.terms);
-                        console.log("[Dashboard] result.data.terms:", result.data.terms);
-                        console.log("[Dashboard] Looking for terms[" + defaultSection.sectionId + "]");
                         const sectionTerms = extractTermsForSection(result.data, defaultSection.sectionId);
-                        console.log("[Dashboard] Terms for section", defaultSection.sectionId, ":", sectionTerms);
                         setTerms(sectionTerms);
 
                         // Set current term
                         const currentTerm = getCurrentTerm(result.data, defaultSection.sectionId);
-                        console.log("[Dashboard] Current term:", currentTerm);
                         setSelectedTerm(currentTerm);
                     }
                 }
@@ -73,22 +75,69 @@ export default function DashboardPage() {
         fetchStartupData();
     }, []);
 
+    // Fetch events when section or term changes
+    useEffect(() => {
+        async function fetchEvents() {
+            if (!selectedSection || !selectedTerm) return;
+
+            setEventsLoading(true);
+            setEventsError(null);
+            setEvents([]);
+            setSelectedEvent(null);
+
+            try {
+                const data = await getEvents(selectedSection.sectionId, selectedTerm.termId);
+                setEvents(data);
+            } catch (err: any) {
+                console.error("Failed to fetch events:", err);
+                setEventsError(err.message || "Failed to fetch events");
+            } finally {
+                setEventsLoading(false);
+            }
+        }
+
+        fetchEvents();
+    }, [selectedSection, selectedTerm]);
+
+    // Fetch attendance when event is selected
+    useEffect(() => {
+        async function fetchAttendance() {
+            if (!selectedSection || !selectedTerm || !selectedEvent) return;
+
+            setAttendanceLoading(true);
+            setAttendanceError(null);
+            setAttendance([]);
+
+            try {
+                const data = await getEventAttendance(
+                    selectedSection.sectionId,
+                    selectedTerm.termId,
+                    selectedEvent.eventid
+                );
+                setAttendance(data);
+            } catch (err: any) {
+                console.error("Failed to fetch attendance:", err);
+                setAttendanceError(err.message || "Failed to fetch attendance");
+            } finally {
+                setAttendanceLoading(false);
+            }
+        }
+
+        fetchAttendance();
+    }, [selectedEvent, selectedSection, selectedTerm]);
+
     const handleSectionChange = (sectionId: string) => {
-        console.log("[Dashboard] Section changed to:", sectionId);
         const section = sections.find((s) => s.sectionId === sectionId);
-        console.log("[Dashboard] Found section:", section);
 
         if (section && startupData) {
             setSelectedSection(section);
 
             // Update terms for new section
             const sectionTerms = extractTermsForSection(startupData, sectionId);
-            console.log("[Dashboard] Terms for new section:", sectionTerms);
             setTerms(sectionTerms);
 
             // Set current term for new section
             const currentTerm = getCurrentTerm(startupData, sectionId);
-            console.log("[Dashboard] Current term for new section:", currentTerm);
             setSelectedTerm(currentTerm);
         }
     };
@@ -98,22 +147,6 @@ export default function DashboardPage() {
         if (term) {
             setSelectedTerm(term);
         }
-    };
-
-    const testApi = async () => {
-        setLoading(true);
-        setError(null);
-        setResponse(null);
-
-        const result = await osmGet(apiPath);
-
-        if (result.error) {
-            setError(result.error);
-        } else {
-            setResponse(result.data);
-        }
-
-        setLoading(false);
     };
 
     const handleLogout = async () => {
@@ -134,6 +167,9 @@ export default function DashboardPage() {
                     <Button asChild variant="ghost" size="sm">
                         <a href="/debug">Debug</a>
                     </Button>
+                    <Button asChild variant="ghost" size="sm">
+                        <a href="/debug/api-browser">API Browser</a>
+                    </Button>
                     <Button onClick={handleLogout} variant="outline">
                         Logout
                     </Button>
@@ -153,8 +189,7 @@ export default function DashboardPage() {
                         />
                         {selectedSection && (
                             <div className="mt-2 text-xs text-muted-foreground">
-                                Type: {selectedSection.sectionType}
-                                {selectedSection.isDefault && " (Default)"}
+                                ID: <code className="bg-muted px-1 py-0.5 rounded">{selectedSection.sectionId}</code>
                             </div>
                         )}
                     </div>
@@ -167,88 +202,108 @@ export default function DashboardPage() {
                         />
                         {selectedTerm && (
                             <div className="mt-2 text-xs text-muted-foreground">
-                                {selectedTerm.startDate} to {selectedTerm.endDate}
+                                ID: <code className="bg-muted px-1 py-0.5 rounded">{selectedTerm.termId}</code>
                             </div>
                         )}
                     </div>
                 </div>
-
-                {selectedSection && selectedTerm && (
-                    <div className="mt-4 rounded-md bg-muted p-3 text-sm">
-                        <strong>Selected:</strong> {selectedSection.sectionName} - {selectedTerm.name}
-                        <div className="mt-1 text-xs text-muted-foreground">
-                            Section ID: {selectedSection.sectionId} | Term ID: {selectedTerm.termId}
-                        </div>
-                    </div>
-                )}
             </div>
 
-            {/* API Discovery Utility */}
-            <div className="rounded-lg border p-6">
-                <h2 className="mb-4 text-xl font-semibold">API Discovery Utility</h2>
-                <p className="mb-4 text-sm text-muted-foreground">
-                    Test OSM API endpoints. The proxy will automatically handle
-                    authentication and token refresh.
-                </p>
+            {/* Events Browser */}
+            <div className="grid gap-6 md:grid-cols-2">
+                {/* Events List */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Events</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {eventsLoading ? (
+                            <div className="text-sm text-muted-foreground">Loading events...</div>
+                        ) : eventsError ? (
+                            <div className="text-sm text-destructive">{eventsError}</div>
+                        ) : events.length === 0 ? (
+                            <div className="text-sm text-muted-foreground">No events found for this term.</div>
+                        ) : (
+                            <div className="flex flex-col gap-2 max-h-[500px] overflow-y-auto">
+                                {events.map((event) => (
+                                    <div
+                                        key={event.eventid}
+                                        className={`cursor-pointer rounded-md border p-3 transition-colors hover:bg-muted ${selectedEvent?.eventid === event.eventid ? "bg-muted border-primary" : ""
+                                            }`}
+                                        onClick={() => setSelectedEvent(event)}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div className="font-medium">{event.name}</div>
+                                            <Badge variant="outline">{event.startdate}</Badge>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                            {event.location}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
 
-                <div className="flex gap-2">
-                    <div className="flex-1">
-                        <Input
-                            placeholder="Enter API path (e.g., sections, events)"
-                            value={apiPath}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                setApiPath(e.target.value)
-                            }
-                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-                                e.key === "Enter" && testApi()
-                            }
-                        />
-                    </div>
-                    <Button onClick={testApi} disabled={loading || !apiPath}>
-                        {loading ? "Loading..." : "Test API"}
-                    </Button>
-                </div>
+                {/* Event Details & Attendance */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>
+                            {selectedEvent ? selectedEvent.name : "Select an Event"}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {selectedEvent ? (
+                            <div className="flex flex-col gap-4">
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <span className="font-semibold">Date:</span> {selectedEvent.startdate}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Time:</span> {selectedEvent.starttime} - {selectedEvent.endtime}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Location:</span> {selectedEvent.location}
+                                    </div>
+                                    <div>
+                                        <span className="font-semibold">Cost:</span> {selectedEvent.cost}
+                                    </div>
+                                </div>
 
-                {error && (
-                    <div className="mt-4 rounded-md border border-destructive bg-destructive/10 p-4">
-                        <p className="text-sm text-destructive">
-                            <strong>Error:</strong> {error}
-                        </p>
-                    </div>
-                )}
-
-                {response && (
-                    <div className="mt-4">
-                        <h3 className="mb-2 font-semibold">Response:</h3>
-                        <pre className="max-h-96 overflow-auto rounded-md bg-muted p-4 text-xs">
-                            {JSON.stringify(response, null, 2)}
-                        </pre>
-                    </div>
-                )}
-            </div>
-
-            <div className="rounded-lg border p-6">
-                <h2 className="mb-2 text-xl font-semibold">Common Endpoints</h2>
-                <p className="mb-4 text-sm text-muted-foreground">
-                    Click to test common OSM API endpoints:
-                </p>
-                <div className="flex flex-wrap gap-2">
-                    {["sections", "events", "members", "badges", "programme"].map(
-                        (endpoint) => (
-                            <Button
-                                key={endpoint}
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => {
-                                    setApiPath(endpoint);
-                                    setTimeout(() => testApi(), 100);
-                                }}
-                            >
-                                {endpoint}
-                            </Button>
-                        )
-                    )}
-                </div>
+                                <div className="border-t pt-4">
+                                    <h3 className="font-semibold mb-2">Attendance</h3>
+                                    {attendanceLoading ? (
+                                        <div className="text-sm text-muted-foreground">Loading attendance...</div>
+                                    ) : attendanceError ? (
+                                        <div className="text-sm text-destructive">{attendanceError}</div>
+                                    ) : attendance.length === 0 ? (
+                                        <div className="text-sm text-muted-foreground">No attendance records found.</div>
+                                    ) : (
+                                        <div className="flex flex-col gap-1 max-h-[300px] overflow-y-auto">
+                                            {attendance.map((record) => (
+                                                <div key={record.scoutid} className="flex justify-between items-center text-sm p-2 border-b last:border-0">
+                                                    <span>{record.firstname} {record.lastname}</span>
+                                                    <Badge variant={
+                                                        record.attending === "Yes" ? "default" :
+                                                            record.attending === "No" ? "destructive" :
+                                                                "secondary"
+                                                    }>
+                                                        {record.attending}
+                                                    </Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-sm text-muted-foreground">
+                                Select an event from the list to view details and attendance.
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
