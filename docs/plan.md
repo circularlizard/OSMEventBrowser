@@ -4,10 +4,10 @@
 To build an OSM Event Browser with read access to events and member data.
 
 ## OAuth Scopes
-The application requests the following OAuth scopes (using **dot notation**):
-- `section.event:read` - Read access to events
-- `section.member:read` - Read access to member personal details
-- `section.programme:read` - Read access to programme data
+The application requests the following OAuth scopes (using **colon notation**):
+- `section:event:read` - Read access to events
+- `section:member:read` - Read access to member personal details
+- `section:programme:read` - Read access to programme data
 
 ## API Rate Limiting
 The OSM API enforces rate limits per authenticated user. The application must:
@@ -31,8 +31,9 @@ The OSM API enforces rate limits per authenticated user. The application must:
     - Exchange code for tokens
     - Store tokens in HTTP-Only cookies
 - [x] Implement Token Refresh logic
+    - [x] Corrected OAuth scopes to use colon notation (`section:member:read`, etc.) in all relevant files and documentation, resolving permission-related issues.
 - [x] Create helper functions for cookie management
-- [x] Request correct OAuth scopes (section.event:read, section.member:read, section.programme:read)
+- [x] Request correct OAuth scopes (section:event:read, section:member:read, section:programme:read)
 
 ### Phase 3: API Proxy Layer ✅
 - [x] Create generic proxy handler `/api/osm/[...path]`
@@ -41,7 +42,7 @@ The OSM API enforces rate limits per authenticated user. The application must:
 - [x] Secure API routes (ensure internal use only/valid session)
 - [x] Monitor rate limit headers
 - [x] Handle 429 responses
-- [x] Check for X-Blocked and X-Deprecated headers
+- [x] Check for `X-Blocked` and `X-Deprecated` headers
 - [x] Create client-side API helpers
 
 ### Phase 4: API Refinement & Data Extraction ✅
@@ -72,27 +73,68 @@ The OSM API enforces rate limits per authenticated user. The application must:
 - [x] Theme and styling (Modern Violet/Scout theme)
 - [x] Create dedicated API Browser for debugging (`/debug/api-browser`)
 
-### Phase 6: Enhanced UI & Navigation
-- [ ] **Dashboard Refactor**:
+### Phase 6: Enhanced UI & Navigation ✅
+- [x] **Dashboard Refactor**:
     - [x] Display event statistics (Invited/Yes/No) segmented by Members/Leaders.
-    - [ ] Implement sorting controls for the event list (Sort by: Date, Name, Attendees Accepted).
-    - [ ] Default sorting: Most recent first.
-- [ ] **Event Details Page** (`/dashboard/events/[eventId]`):
+    - [x] Implement sorting controls for the event list (Sort by: Date, Name, Attendees Accepted).
+    - [x] Default sorting: Most recent first.
+    - [x] **Enhancement: State Persistence**: Updated dashboard to read/write `sectionId` to URL search params, ensuring section selection is preserved when navigating back from details.
+    - [x] **Enhancement: Date Ranges**: Updated both Dashboard and Event Details to display date ranges (Start - End) if dates differ.
+    - [x] **Enhancement: Past Events**: Past events on the dashboard are now visually de-emphasized (greyscale/opacity). Fixed logic to correctly parse UK-formatted dates (DD/MM/YYYY) to avoid ambiguity with US formats (e.g., 01/12 vs 12/01).
+    - [x] Improved the layout of the section selector area to be more responsive and less cramped, allowing the section ID and current term to wrap.
+- [x] **Event Details Page** (`/dashboard/events/[eventId]`):
     - [x] Create dedicated page layout.
     - [x] Display comprehensive event metadata.
-    - [ ] **Layout Fixes**:
-        - [ ] Remove internal scrollbar from attendee list; allow full page scrolling.
-    - [ ] **Attendee List Enhancements**:
-        - [ ] Display all available attendee details (e.g., DOB, Photo, Patrol ID, etc.).
+    - [x] **Layout Fixes**:
+        - [x] Remove internal scrollbar from attendee list; allow full page scrolling.
+    - [x] **Attendee List Enhancements**:
         - [ ] Display "Medical/Dietary" info (from available attendance data initially).
-        - [ ] Implement Sorting: Name, Patrol, Age (Years/Months).
-        - [ ] Implement Filtering: Role (Member/Leader), Patrol, Attendance Status.
-    - [ ] **Data Enrichment**:
-        - [ ] Investigate and implement Patrol Name resolution (Likely `ext/members/patrols/?action=getPatrols` or similar, as `getSectionConfig` is insufficient).
+        - [x] Implement Sorting: Name, Patrol, Age (Years/Months).
+        - [x] Implement Filtering: Role (Member/Leader), Patrol, Attendance Status.
+    - [x] **Data Enrichment**:
+        - [x] Investigate and implement Patrol Name resolution.
+        - [x] Added a conditional message near the Patrol column header indicating that patrol names require `member:read` permissions, based on the user's `startupData` permissions.
+        - [x] Ensured `startupData` is always fetched and available for permission checks.
 - [ ] **General**:
     - [ ] Update Favicon to match app logo.
 
-### Phase 7: Data Export
+### Phase 6.5: Member & Patrol Centric Views ✅
+- [x] **Data Aggregation API (`/api/osm/members-events-summary`)**:
+    - [x] Implement new server-side API route to fetch all events, patrols, and attendance records for a given section/term.
+    - [x] Aggregates data into a member-centric and patrol-centric structure.
+    - [x] Includes an in-memory caching mechanism (5-minute TTL) to optimize data retrieval and respect OSM API rate limits.
+- [x] **Service Layer Refactoring for Client/Server Isolation**:
+    - [x] Implement dynamic imports for server-only modules to prevent client-side bundling errors.
+    - [x] Split service functions (`getEvents`, `getEventAttendance`, `getPatrols`) into `client-services.ts`/`client-patrols.ts` (using `osmGet`) and `server-services.ts` / `server-patrols.ts` (using `callExternalOsmApi`).
+    - [x] Centralize shared types in `services-types.ts`.
+    - [x] Update all call sites (components and API routes) to use the correct client/server service/patrol modules.
+    - [x] **Verification**: Dashboard page loads correctly with member and patrol lists.
+    - [x] Resolved `TypeError: Failed to parse URL` by ensuring correct absolute URL construction for server-side `fetch` calls.
+    - [x] Fixed `SocketError: other side closed` by eliminating internal HTTP calls from server routes using direct service module imports.
+- [x] **Member Details View (`/dashboard/members/[memberid]`)**:
+    - [x] Created dedicated page to display member details and their event attendance across all events.
+- [x] **Patrol Details View (`/dashboard/patrols/[patrolid]`)**:
+    - [x] Created dedicated page to display patrol details and event attendance for all members within the patrol.
+- [x] **Navigation Integration**:
+    - [x] Update Dashboard to display lists of members and patrols, with links to their respective detail pages.
+    - [x] Update Event Details page attendance table to make member names and patrol names clickable, linking to their respective detail pages.
+
+### Phase 6.75: Baseline UI Tests
+- [ ] **Set up Jest and React Testing Library**:
+    - [ ] Install development dependencies: `jest`, `jest-environment-jsdom`, `@testing-library/react`, `@testing-library/jest-dom`, `@types/jest`, `ts-jest`, `@babel/preset-env`, `@babel/preset-react`, `@babel/preset-typescript`, `babel-jest`.
+    - [ ] Configure Jest (`jest.config.js`, `babel.config.js`).
+    - [ ] Add `test` script to `package.json`.
+    - [ ] Create `jest.setup.ts` for common setup.
+- [ ] Implement a baseline UI test for the Dashboard page.
+- [ ] Implement a baseline UI test for the Event Details page.
+- [ ] Implement a baseline UI test for the Member Details page.
+- [ ] Implement a baseline UI test for the Patrol Details page.
+
+### Phase 7: Dashboard Tab Integration
+- [ ] Introduce `shadcn/ui` Tabs component to the Dashboard page.
+- [ ] Refactor Dashboard UI to place Events, Members Summary, and Patrols Summary into separate tabs.
+
+### Phase 8: Data Export
 - [ ] Implement PDF Export (`pdfkit` or `puppeteer` server-side)
     - [ ] Event summary reports
     - [ ] Attendance reports
