@@ -4,6 +4,7 @@ export interface OSMEvent {
     eventid: string;
     name: string;
     startdate: string;
+    startdate_iso?: string;
     enddate: string;
     starttime: string;
     endtime: string;
@@ -13,6 +14,15 @@ export interface OSMEvent {
     cost: string;
     confidential: string;
     meeting_type: string;
+    // Event Statistics
+    invited: number;
+    yes: number;
+    yes_members: number;
+    yes_yls: number; // Young Leaders
+    yes_leaders: number;
+    no: number;
+    shown: number; // Number of people whose attendance is shown
+    x: number; // Unknown field, possibly excused
     // Add other fields as discovered
 }
 
@@ -25,6 +35,8 @@ export interface OSMAttendance {
     notes: string;
     patrolid: string;
     sectionid: string;
+    dob: string; // Date of Birth
+    photo_guid?: string;
 }
 
 /**

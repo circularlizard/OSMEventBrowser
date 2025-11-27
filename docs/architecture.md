@@ -72,8 +72,12 @@ All requests to the poorly documented OSM REST API **MUST** be proxied through a
 
 ### **A. Frontend Display**
 
-1. The React frontend **MUST** feature a clean, responsive UI suitable for mobile and desktop viewing, utilizing **shadcn/ui** components (styled with **Tailwind CSS**) for consistency and rapid development. **Theme Preference:** Blue.  
-2. A data discovery utility **SHOULD** be included during development to display the raw JSON response structure for new endpoints, assisting with the poorly documented API.
+1. The React frontend **MUST** feature a clean, responsive UI suitable for mobile and desktop viewing, utilizing **shadcn/ui** components (styled with **Tailwind CSS**) for consistency and rapid development. **Theme Preference:** Blue/Violet (Scout modern).
+2. **Navigation Structure:**
+    *   **Dashboard:** Acts as a high-level summary view. Displays lists of events with key statistics (attendance counts).
+    *   **Detail Pages:** Complex data views (like full attendance lists with medical info) **MUST** reside on dedicated pages (e.g., `/dashboard/events/[id]`) to maximize screen real estate and performance.
+3. **Header Guideline:** The persistent top header **MUST** be reserved for navigation controls (e.g., "Back" buttons) and the primary page title. Detailed entity metadata (IDs, costs, summaries) **MUST** be displayed within the main content area (e.g., in a "Details" card) to keep the header clean and focused.
+4. A data discovery utility **SHOULD** be included during development to display the raw JSON response structure for new endpoints, assisting with the poorly documented API.
 
 ### **B. Server-Side Data Export**
 

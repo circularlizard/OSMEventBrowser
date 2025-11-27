@@ -107,6 +107,14 @@ export const OSM_ENDPOINTS: ApiEndpoint[] = [
     },
     {
         method: "GET",
+        path: "ext/members/patrols/",
+        label: "Get Patrols",
+        description: "Get patrol structure and names",
+        params: ["sectionid"],
+        defaultParams: { action: "getPatrols" },
+    },
+    {
+        method: "GET",
         path: "ext/generic/startup/",
         label: "Get Startup Data",
         description: "Get initial startup data (returns JS)",

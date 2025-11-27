@@ -50,30 +50,52 @@ The OSM API enforces rate limits per authenticated user. The application must:
     - [x] Implement logic to identify the *current* term (required for other API calls)
     - [x] Store/Cache `termid` for use in subsequent requests (Managed via React state)
 - [x] Implement events API integration
-    - [x] Target endpoint: `ext/events/summary/?action=getEvents` (requires `sectionid` + `termid`)
+    - [x] Target endpoint: `ext/events/summary/?action=get` (requires `sectionid` + `termid`)
     - [x] Verify response structure (expecting `items` array)
     - [x] Handle rate limiting headers (`X-RateLimit-*`) (Handled by proxy)
 - [x] Implement participant/attendance data retrieval
-    - [x] Target endpoint: `ext/events/summary/?action=getAttendance` (requires `sectionid` + `termid` + `eventid`)
+    - [x] Target endpoint: `ext/events/event/?action=getAttendance` (requires `sectionid` + `termid` + `eventid`)
     - [x] Verify attendance data structure
     - [x] Ensure member details are sufficient (or if `getMembersGrid` is needed)
 
 > [!NOTE]
 > Analysis of reference implementation shows that `termid` is critical for almost all OSM API calls. We must successfully fetch and identify the current term before we can fetch events or attendance.
 
-### Phase 5: Frontend Development
-- [x] Create Dashboard layout with API Discovery Utility
-- [ ] Build Event Browser UI
-    - [ ] List events with filtering/sorting
-    - [ ] Event detail view
-    - [ ] Member attendance view
-- [ ] Implement proper error handling and loading states
-- [ ] Add responsive design for mobile
+### Phase 5: Frontend Development ✅
+- [x] Create Dashboard layout
+- [x] Build Event Browser UI
+    - [x] List events with filtering/sorting
+    - [x] Event detail view
+    - [x] Member attendance view
+- [x] Implement proper error handling and loading states
+- [x] Add responsive design for mobile
+- [x] Theme and styling (Modern Violet/Scout theme)
+- [x] Create dedicated API Browser for debugging (`/debug/api-browser`)
 
-### Phase 6: Data Export
-- [ ] Implement PDF Export (`pdfkit` or `puppeteer`)
+### Phase 6: Enhanced UI & Navigation
+- [ ] **Dashboard Refactor**:
+    - [x] Display event statistics (Invited/Yes/No) segmented by Members/Leaders.
+    - [ ] Implement sorting controls for the event list (Sort by: Date, Name, Attendees Accepted).
+    - [ ] Default sorting: Most recent first.
+- [ ] **Event Details Page** (`/dashboard/events/[eventId]`):
+    - [x] Create dedicated page layout.
+    - [x] Display comprehensive event metadata.
+    - [ ] **Layout Fixes**:
+        - [ ] Remove internal scrollbar from attendee list; allow full page scrolling.
+    - [ ] **Attendee List Enhancements**:
+        - [ ] Display all available attendee details (e.g., DOB, Photo, Patrol ID, etc.).
+        - [ ] Display "Medical/Dietary" info (from available attendance data initially).
+        - [ ] Implement Sorting: Name, Patrol, Age (Years/Months).
+        - [ ] Implement Filtering: Role (Member/Leader), Patrol, Attendance Status.
+    - [ ] **Data Enrichment**:
+        - [ ] Investigate and implement Patrol Name resolution (Likely `ext/members/patrols/?action=getPatrols` or similar, as `getSectionConfig` is insufficient).
+- [ ] **General**:
+    - [ ] Update Favicon to match app logo.
+
+### Phase 7: Data Export
+- [ ] Implement PDF Export (`pdfkit` or `puppeteer` server-side)
     - [ ] Event summary reports
     - [ ] Attendance reports
-- [ ] Implement Spreadsheet Export (CSV/XLSX)
+- [ ] Implement Spreadsheet Export (CSV/XLSX server-side)
     - [ ] Event data export
     - [ ] Member data export
