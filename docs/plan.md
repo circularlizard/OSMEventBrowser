@@ -119,22 +119,96 @@ The OSM API enforces rate limits per authenticated user. The application must:
     - [x] Update Dashboard to display lists of members and patrols, with links to their respective detail pages.
     - [x] Update Event Details page attendance table to make member names and patrol names clickable, linking to their respective detail pages.
 
-### Phase 6.75: Baseline UI Tests
-- [ ] **Set up Jest and React Testing Library**:
-    - [ ] Install development dependencies: `jest`, `jest-environment-jsdom`, `@testing-library/react`, `@testing-library/jest-dom`, `@types/jest`, `ts-jest`, `@babel/preset-env`, `@babel/preset-react`, `@babel/preset-typescript`, `babel-jest`.
-    - [ ] Configure Jest (`jest.config.js`, `babel.config.js`).
-    - [ ] Add `test` script to `package.json`.
+### Phase 7: Basic UI Test Coverage
+- [ ] **Test Infrastructure Setup**:
+    - [ ] Install development dependencies: `jest`, `jest-environment-jsdom`, `@testing-library/react`, `@testing-library/jest-dom`, `@types/jest`, `ts-jest`.
+    - [ ] Configure Jest (`jest.config.js` or `jest.config.ts`).
+    - [ ] Add `test` and `test:ci` scripts to `package.json`.
     - [ ] Create `jest.setup.ts` for common setup.
-- [ ] Implement a baseline UI test for the Dashboard page.
-- [ ] Implement a baseline UI test for the Event Details page.
-- [ ] Implement a baseline UI test for the Member Details page.
-- [ ] Implement a baseline UI test for the Patrol Details page.
+- [ ] **Baseline Component Tests**:
+    - [ ] Test Dashboard page renders without crashing.
+    - [ ] Test Event Details page renders with mock event data.
+    - [ ] Test Member Details page renders with mock member data.
+    - [ ] Test Patrol Details page renders with mock patrol data.
+    - [ ] Test Section/Term selector renders and handles selection.
+- [ ] **Critical Functionality Tests**:
+    - [ ] Test event list filtering and sorting on Dashboard.
+    - [ ] Test attendance table rendering on Event Details.
+    - [ ] Test navigation links between pages work correctly.
+- [ ] **CI Integration (Basic)**:
+    - [ ] Create GitHub Actions workflow to run tests on PR.
+    - [ ] Configure Vercel to require passing tests before deployment.
 
-### Phase 7: Dashboard Tab Integration
-- [ ] Introduce `shadcn/ui` Tabs component to the Dashboard page.
+### Phase 8: Member & Patrol Detail Pages - Data Filtering & Functionality
+- [ ] **Member Details Page Improvements**:
+    - [ ] Implement filtering to show only current members (based on active status/membership dates).
+    - [ ] Ensure event attendance data is correctly associated and displayed.
+    - [ ] Add proper loading and error states.
+    - [ ] Implement member metadata display (age, patrol, etc.).
+- [ ] **Patrol Details Page Improvements**:
+    - [ ] Filter to show only current patrol members.
+    - [ ] Ensure patrol-level statistics are accurate.
+    - [ ] Display patrol leader information if available.
+    - [ ] Add proper loading and error states.
+- [ ] **Data Quality**:
+    - [ ] Verify member status determination logic.
+    - [ ] Handle edge cases (members with no attendance, inactive patrols, etc.).
+
+### Phase 9: UI Refinement & Polish
+- [ ] **Dashboard Tab Integration**:
+    - [ ] Introduce `shadcn/ui` Tabs component to the Dashboard page.
+    - [ ] Refactor Dashboard UI to place Events, Members Summary, and Patrols Summary into separate tabs.
+- [ ] **Consistency Review**:
+    - [ ] Ensure consistent spacing, typography, and color usage across all pages.
+    - [ ] Standardize button styles and interactive elements.
+    - [ ] Review and unify loading/error state presentations.
+- [ ] **Responsive Design**:
+    - [ ] Test and refine mobile/tablet layouts for all pages.
+    - [ ] Ensure tables are mobile-friendly (responsive tables or cards).
+- [ ] **Navigation & UX**:
+    - [ ] Add breadcrumb navigation where appropriate.
+    - [ ] Ensure back navigation works correctly and preserves state.
+    - [ ] Add "no data" empty states with helpful messaging.
+- [ ] **Performance**:
+    - [ ] Review and optimize client-side data fetching.
+    - [ ] Ensure proper memoization of expensive components.
+    - [ ] Verify cache effectiveness for API calls.
+- [ ] **Accessibility**:
+    - [ ] Add proper ARIA labels and roles.
+    - [ ] Ensure keyboard navigation works throughout the app.
+    - [ ] Test with screen readers.
+
+### Phase 10: Comprehensive Test Coverage
+- [ ] **Expand Test Infrastructure**:
+    - [ ] Add additional testing dependencies: `@babel/preset-env`, `@babel/preset-react`, `@babel/preset-typescript`, `babel-jest`.
+    - [ ] Configure coverage thresholds (target: 80% coverage minimum).
+    - [ ] Set up coverage reporting in CI.
+- [ ] **Unit Tests**:
+    - [ ] Test utility functions (`lib/utils.ts`, `lib/osm/data-helpers.ts`).
+    - [ ] Test API helper functions (`lib/osm/api.ts`).
+    - [ ] Test data parsing logic (`lib/osm/parser.ts`).
+    - [ ] Test patrol helpers (`lib/osm/patrols.ts`).
+- [ ] **Component Tests**:
+    - [ ] Test UI components (`components/ui/*`).
+    - [ ] Test OSM components (`components/osm/*`).
+    - [ ] Test with various prop combinations and edge cases.
+- [ ] **Integration Tests**:
+    - [ ] Test Dashboard page rendering and interactions.
+    - [ ] Test Event Details page with mock data.
+    - [ ] Test Member Details page with filtering logic.
+    - [ ] Test Patrol Details page with filtering logic.
+    - [ ] Test Section/Term selector functionality.
+- [ ] **API Route Tests**:
+    - [ ] Test `/api/osm/[...path]` proxy logic.
+    - [ ] Test `/api/osm/members-events-summary` aggregation.
+    - [ ] Test authentication flows (mock OAuth).
+    - [ ] Test rate limiting handling.
+    - [ ] Add performance benchmarks for critical paths.
+
+### Phase 11: Data Exporti` Tabs component to the Dashboard page.
 - [ ] Refactor Dashboard UI to place Events, Members Summary, and Patrols Summary into separate tabs.
 
-### Phase 8: Data Export
+### Phase 12: Data Export
 - [ ] Implement PDF Export (`pdfkit` or `puppeteer` server-side)
     - [ ] Event summary reports
     - [ ] Attendance reports
