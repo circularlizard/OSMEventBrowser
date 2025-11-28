@@ -95,15 +95,38 @@ export async function callExternalOsmApi<T = any>(
     }
 
     let data;
+    let responseText: string;
     try {
-        const text = await response.text();
+        responseText = await response.text();
+        const responseContentType = response.headers.get('content-type');
+
         if (debug) {
             console.log(`[OSM-DEBUG] Response: ${response.status} ${response.statusText}`);
-            console.log(`[OSM-DEBUG] Response Body (First 500 chars):`, text.substring(0, 500));
+            console.log(`[OSM-DEBUG] Content-Type: ${responseContentType}`);
+            console.log(`[OSM-DEBUG] Response Body (First 500 chars):`, responseText.substring(0, 500));
         }
-        data = text ? JSON.parse(text) : null;
+
+        if (responseContentType?.includes('text/html')) {
+            console.error("[OSM-DEBUG] CRITICAL: Received HTML response (likely Blocked or Maintenance page) with status", response.status);
+            return {
+                data: null,
+                status: 403,
+                headers: response.headers,
+                error: "OSM API Blocked or Maintenance (HTML Response received)"
+            };
+        }
+
+        if (responseContentType?.includes('application/json')) {
+            data = responseText ? JSON.parse(responseText) : null;
+        } else if (responseContentType?.includes('text/javascript')) {
+            // For startup data, return as raw text
+            data = responseText;
+        } else {
+            // Default to text if not recognized
+            data = responseText;
+        }
     } catch (e) {
-        console.error(`[OSM-DEBUG] JSON Parse Error:`, e);
+        console.error(`[OSM-DEBUG] Response parsing error:`, e);
         data = null;
     }
 
