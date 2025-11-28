@@ -109,6 +109,15 @@ export class SmartQueue {
                 
                 this.updateRateLimitInfo(response.headers);
 
+                // Check for Hard Block (403 with specific message)
+                if (response.status === 403 && response.error && response.error.includes("Blocked")) {
+                    debugLog("CRITICAL: Application is BLOCKED by OSM. Aborting all pending requests.");
+                    this.queue = []; // Kill the queue
+                    this.isProcessing = false;
+                    request.reject(new Error("CRITICAL: Application is BLOCKED by OSM. Please stop testing and wait."));
+                    return; // Stop the loop
+                }
+
                 if (response.status === 429) {
                     debugLog("Received 429 from proxy, retrying after pause.");
                     this.updateRateLimitInfo(response.headers); // Update with Retry-After
