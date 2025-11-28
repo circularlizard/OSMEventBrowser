@@ -51,6 +51,17 @@ export default function DashboardPage() {
         async function fetchStartupData() {
             try {
                 const response = await fetch("/api/debug-startup");
+                
+                if (!response.ok) {
+                    const result = await response.json();
+                    if (response.status === 403 && result.error?.includes("Blocked")) {
+                        setError("OSM API Access Blocked. Please wait and try again later.");
+                    } else {
+                        setError(`Failed to load startup data: ${result.error || response.statusText}`);
+                    }
+                    return;
+                }
+
                 const result = await response.json();
 
                 if (result.data) {
