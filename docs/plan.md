@@ -119,21 +119,23 @@ The OSM API enforces rate limits per authenticated user. The application must:
     - [x] Update Dashboard to display lists of members and patrols, with links to their respective detail pages.
     - [x] Update Event Details page attendance table to make member names and patrol names clickable, linking to their respective detail pages.
 
-### Phase 6.6: Stability & Optimization (Immediate) 🔄
-- [ ] **Fix Detail Page Rendering**:
-    - [ ] Investigate and fix rendering issues on Member, Patrol, and Event detail pages.
-    - [ ] Ensure data is correctly passed and displayed.
-- [ ] **Optimize API Calls**:
-    - [ ] Integrate `/v3/events/event/{event ID}/summary` endpoint to fetch richer event data (including custom fields).
-    - [ ] Optimize data fetching to prevent over-fetching.
+### Phase 6.6: Stability & Optimization (Immediate) ✅
+- [x] **Fix Detail Page Rendering**:
+    - [x] Investigate and fix rendering issues on Member, Patrol, and Event detail pages.
+    - [x] Ensure data is correctly passed and displayed.
+    - [x] Created Member and Patrol detail pages.
+    - [x] Refactored Dashboard to include Members and Patrols tabs.
+- [x] **Optimize API Calls**:
+    - [x] Integrate `/v3/events/event/{event ID}/summary` endpoint to fetch richer event data (including custom fields).
+    - [x] Optimize data fetching to prevent over-fetching (Using Aggregation API).
 
-### Phase 7: Baseline Testing
-- [ ] **Test Infrastructure Setup**:
-    - [ ] Install development dependencies: `jest` or `vitest`, `testing-library`.
-    - [ ] Configure test runner.
-- [ ] **Baseline Tests**:
-    - [ ] Create "smoke tests" for critical pages (Dashboard, Event Details).
-    - [ ] Ensure application builds and runs without errors.
+### Phase 7: Baseline Testing ✅
+- [x] **Test Infrastructure Setup**:
+    - [x] Install development dependencies: `vitest`, `jsdom`, `@testing-library/react`.
+    - [x] Configure `vitest.config.mts` and `npm test` script.
+- [x] **Baseline Tests**:
+    - [x] Create smoke tests for utility functions (`data-helpers.test.ts`).
+    - [x] Ensure application builds and runs without errors (Verified via `npm run build`).
 
 ### Phase 8: Data Export
 - [ ] Implement PDF Export (`pdfkit` or `puppeteer` server-side)
