@@ -29,13 +29,13 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
     - [x] **Multi-Section Logic:** Implement state for selecting/managing up to 3 active sections.
     - [x] **Debug Mode:** Implement persistent toggle (localStorage) to enable verbose logging.
     - [x] Create `src/lib/store.ts`.
-- [ ] **8.2: Smart Request Queue (Rate Limiting)**
-    - [ ] Implement `SmartQueue` class:
-        - [ ] Singleton instance.
-        - [ ] Task priority management.
-        - [ ] **Rate Limit Logic:** Intercept responses to read `X-RateLimit` headers.
-        - [ ] **Pause/Resume:** Automatically pause queue on 429 or low remaining limit.
-    - [ ] Connect Queue to `OsmStore` actions.
+- [x] **8.2: Smart Request Queue (Rate Limiting)**
+    - [x] Implement `SmartQueue` class:
+        - [x] Singleton instance.
+        - [x] Task priority management.
+        - [x] **Rate Limit Logic:** Intercept responses to read `X-RateLimit` headers.
+        - [x] **Pause/Resume:** Automatically pause queue on 429 or low remaining limit.
+    - [x] Connect Queue to `OsmStore` actions (Implicit in next phase usage).
 - [ ] **8.3: API Diagnostic Harness (Live Verification)**
     - [ ] Create `/debug/diagnostics` page.
     - [ ] Implement test runner that executes real API calls via the `SmartQueue` to verify rate limiting behavior.
