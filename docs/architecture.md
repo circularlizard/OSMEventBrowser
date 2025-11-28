@@ -119,7 +119,17 @@ Data loading occurs in two distinct stages to balance User Experience (Speed) wi
     *   It executes calls to `v3/events/event/{id}/summary` sequentially (or with a concurrency limit of ~3) to populate custom fields and detailed attendance.
     *   **Outcome:** As data arrives, the UI automatically updates to show enriched information (e.g., dietary flags, exact payment status).
 
-## **VII. Code Organization & Best Practices**
+## **VIII. Testing & Diagnostics Strategy**
+
+To differentiate between backend API failures and frontend rendering issues, the application employs a dual-validation strategy:
+
+1.  **Unit Tests (Logic Verification):**
+    *   The `OsmStore` and `HydrationQueue` are tested in isolation using **Vitest**.
+    *   API calls are mocked to ensure the store correctly transforms and normalizes data.
+2.  **Diagnostic Harness (Runtime Verification):**
+    *   A dedicated `/debug/diagnostics` page serves as a system health check.
+    *   It executes a sequential suite of *real* API calls to the backend proxy.
+    *   It displays raw status codes, latencies, and payload samples, providing definitive proof of API connectivity independent of the main UI.
 
 To ensure maintainability and scalability, the codebase follows specific organizational patterns.
 

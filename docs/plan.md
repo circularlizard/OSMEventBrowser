@@ -22,21 +22,32 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
 
 ## Upcoming Phases
 
-### Phase 8: Client-Side Data Engine (New Architecture)
-- [ ] **State Management Setup**:
+### Phase 8: Data Engine & API Verification (API First)
+- [ ] **8.1: State Management Foundation**
     - [ ] Install `zustand`.
     - [ ] Define `OsmStore` interface (Normalized Events, Members, Patrols).
+    - [ ] Implement `HydrationQueue` logic (pure TS/JS class).
     - [ ] Create `src/lib/store.ts`.
-- [ ] **Progressive Hydration**:
-    - [ ] Implement `Stage 1` logic: Fetch Lists (Patrols, Members, Events Summary).
-    - [ ] Implement `HydrationQueue`: A background manager to fetch `v3/events/event/{id}/summary` sequentially.
-    - [ ] Connect Queue to Store: Update `events` and `members` (attendance) as requests complete.
-- [ ] **Refactor UI to Store**:
-    - [ ] **Dashboard**: Bind to `useOsmStore`. Remove direct API calls from `page.tsx`.
-    - [ ] **Event Details**: Read from Store. If empty (deep link), trigger single-event hydration.
-    - [ ] **Member/Patrol Details**: Read directly from Store (computed views).
+- [ ] **8.2: Engine Testing (Unit/Integration)**
+    - [ ] Write Vitest tests for `OsmStore` (mocking API responses).
+    - [ ] Verify hydration logic correctly updates state.
+    - [ ] Ensure "Skeleton" vs "Detailed" states are handled correctly.
+- [ ] **8.3: API Diagnostic Harness (Live Verification)**
+    - [ ] Create `/debug/diagnostics` page.
+    - [ ] Implement a test runner that executes real API calls (`getEvents`, `getMembers`, `getEventDetails`).
+    - [ ] Display Pass/Fail status, Latency, and Payload validation.
+    - [ ] **Goal:** Prove the backend proxy is healthy *before* building the complex UI.
 
-### Phase 9: Data Export
+### Phase 9: Reactive UI Implementation
+- [ ] **9.1: Dashboard Refactor**
+    - [ ] Connect Dashboard to `OsmStore`.
+    - [ ] Remove direct API calls from `page.tsx`.
+    - [ ] Implement "Skeleton" loading state.
+- [ ] **9.2: Detail Views**
+    - [ ] Connect Member/Patrol/Event details to Store.
+    - [ ] Implement "Live Update" visual indicators as hydration completes.
+
+### Phase 10: Data Export
 - [ ] Implement PDF Export (`pdfkit` or `puppeteer` server-side)
     - [ ] Event summary reports
     - [ ] Attendance reports
