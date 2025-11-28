@@ -38,10 +38,11 @@ export async function callExternalOsmApi<T = any>(
 
     // Ensure trailing slash for 'ext/' routes if missing
     // Logic: Split by '?', check base path, reassemble
+    // Exception: 'ext/members/patrols' fails with a trailing slash
     let apiPath = path;
     const [urlPath, query] = apiPath.split("?");
     
-    if (urlPath.startsWith("ext/") && !urlPath.endsWith("/")) {
+    if (urlPath.startsWith("ext/") && !urlPath.endsWith("/") && !urlPath.includes("members/patrols")) {
          apiPath = `${urlPath}/${query ? `?${query}` : ""}`;
     }
 
