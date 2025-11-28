@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { getEventAttendance, getEvents, type OSMEvent, type OSMAttendance } from "@/lib/osm/services";
+import { getEventAttendance, getEventDetails, type OSMEvent, type OSMAttendance } from "@/lib/osm/services";
 import { getDefaultSection, getCurrentTerm } from "@/lib/osm/data-helpers";
 import { ArrowLeft, ArrowUpDown, User, Check, X } from "lucide-react";
 import {
