@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
         // 1. Fetch Events, Patrols, and Members concurrently
         const [eventsRes, patrolsRes, membersRes] = await Promise.all([
             callExternalOsmApi(`ext/events/summary/?action=get&sectionid=${sectionId}&termid=${termId}`),
-            callExternalOsmApi(`ext/members/patrols/?action=getPatrols&sectionid=${sectionId}`),
+            callExternalOsmApi(`ext/members/patrols?action=getPatrols&sectionid=${sectionId}`),
             callExternalOsmApi(
                 `ext/members/contact/grid/?action=getMembers`, 
                 "POST", 
