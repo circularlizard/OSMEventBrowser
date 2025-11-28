@@ -89,7 +89,7 @@ export default function DiagnosticsPage() {
             { id: 'auth_check', name: 'Authentication Check', status: 'idle' },
             { id: 'startup_data', name: 'Startup Data Fetch', status: 'idle' },
             { id: 'get_patrols', name: 'Get Patrols', status: 'idle' },
-            { id: 'get_members', name: 'Get Members Grid (POST)', status: 'idle' },
+            { id: 'get_members', name: 'Get Members Grid (POST)', status: 'idle', message: 'Note: This fetches all members (for directory-like views). Primary hydration will use V3 event data.' },
             { id: 'get_events_summary', name: 'Get Events Summary', status: 'idle' },
             { id: 'get_event_details_v3', name: 'Get Event Details (v3)', status: 'idle' },
             { id: 'members_events_summary', name: 'Aggregated Data (Members/Events)', status: 'idle' },
@@ -191,32 +191,16 @@ export default function DiagnosticsPage() {
 
         // 4. Get Members Grid (POST)
         await runTest('get_members', async () => {
-            // Need to directly use callExternalOsmApi with proper headers and body
             const response = await smartQueue.post(
                 `ext/members/contact/grid/?action=getMembers`,
-                `section_id=${encodeURIComponent(sectionId)}&term_id=${encodeURIComponent(termId)}`,
+                new URLSearchParams({
+                    section_id: sectionId,
+                    term_id: termId
+                }),
+                { "Content-Type": "application/x-www-form-urlencoded" }
             );
-            // The smartQueue.post might need to accept customHeaders for this to work correctly
-            // smartQueue.post currently defaults to application/json
-            // Let's call osmPost directly for now, or adapt smartQueue.post
-            // OK, smartQueue.post calls osmPost, which defaults to application/json
-            // We need a way to send x-www-form-urlencoded
-            // This is a design flaw in smartQueue/osmApi.post if it cannot handle this.
-            
-            // For now, let's make a direct call for this specific test
-            // This bypasses smartQueue rate limiting for one test, but validates endpoint
-            
-            const rawResponse = await fetch(`/api/osm/ext/members/contact/grid/?action=getMembers`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: `section_id=${encodeURIComponent(sectionId)}&term_id=${encodeURIComponent(termId)}`,
-            });
-            const data = await rawResponse.json();
-            if (!rawResponse.ok || data.error || !data.data?.members?.length) throw new Error(data.error || "No members data returned.");
-            return { status: rawResponse.status, data };
-
+            if (response.error || !response.data?.data?.members?.length) throw new Error(response.error || "No members data returned.");
+            return response;
         });
         
         // 5. Get Events Summary
