@@ -162,7 +162,10 @@ export class SmartQueue {
             };
             this.queue.push(request);
             debugLog(`Request enqueued: ${method} ${path}. Queue size: ${this.queue.length}`);
-            this.processQueue(); // Start processing if not already
+            // Start processing if not already, and catch any unhandled promise rejections from the background
+            this.processQueue().catch(err => {
+                debugLog("Unhandled rejection in background queue processing (should be handled by request.reject):", err);
+            });
         });
     }
 
@@ -172,8 +175,8 @@ export class SmartQueue {
         return this.enqueue(execute, fullPath, "GET");
     }
 
-    public post<T>(path: string, body?: any): Promise<OSMApiResponse<T>> {
-        const execute = () => osmPost<T>(path, body);
+    public post<T>(path: string, body?: any, customHeaders?: HeadersInit): Promise<OSMApiResponse<T>> {
+        const execute = () => osmPost<T>(path, body, customHeaders);
         return this.enqueue(execute, path, "POST");
     }
 

@@ -35,14 +35,27 @@ export async function osmGet<T = any>(
  */
 export async function osmPost<T = any>(
     path: string,
-    body?: any
+    body?: any,
+    customHeaders?: HeadersInit
 ): Promise<OSMApiResponse<T>> {
+    const headers: HeadersInit = {
+        "Content-Type": "application/json", // Default to JSON
+        ...customHeaders,
+    };
+
+    let requestBody: BodyInit | undefined;
+    const contentType = (headers as Record<string, string>)["Content-Type"];
+
+    if (contentType?.includes("application/x-www-form-urlencoded") && body instanceof URLSearchParams) {
+        requestBody = body.toString();
+    } else if (body) {
+        requestBody = JSON.stringify(body);
+    }
+
     const response = await fetch(`/api/osm/${path}`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: body ? JSON.stringify(body) : undefined,
+        headers: headers,
+        body: requestBody,
     });
     const data = await response.json();
 
