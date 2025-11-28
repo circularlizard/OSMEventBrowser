@@ -36,10 +36,10 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
         - [x] **Rate Limit Logic:** Intercept responses to read `X-RateLimit` headers.
         - [x] **Pause/Resume:** Automatically pause queue on 429 or low remaining limit.
     - [x] Connect Queue to `OsmStore` actions (Implicit in next phase usage).
-- [ ] **8.3: API Diagnostic Harness (Live Verification)**
-    - [ ] Create `/debug/diagnostics` page.
-    - [ ] Implement test runner that executes real API calls via the `SmartQueue` to verify rate limiting behavior.
-    - [ ] Display Pass/Fail status, Latency, and Payload validation.
+- [x] **8.3: API Diagnostic Harness (Live Verification)**
+    - [x] Create `/debug/diagnostics` page.
+    - [x] Implement test runner that executes real API calls via the `SmartQueue` to verify rate limiting behavior.
+    - [x] Display Pass/Fail status, Latency, and Payload validation.
 
 ### Phase 9: Reactive UI Implementation & Migration
 - [ ] **9.0: Section Picker (Entry Point)**
