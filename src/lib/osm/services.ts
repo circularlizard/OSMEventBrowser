@@ -73,3 +73,75 @@ export async function getEventAttendance(sectionId: string, termId: string, even
 
     return response.data?.items || [];
 }
+
+/**
+ * Fetch detailed information for a single event
+ */
+export async function getEventDetails(sectionId: string, termId: string, eventId: string): Promise<OSMEvent> {
+    const response = await osmGet(`v3/events/event/${eventId}/summary`, {
+        sectionid: sectionId,
+        termid: termId
+    });
+
+    if (response.error) {
+        throw new Error(response.error);
+    }
+
+    // The v3 endpoint might return the event object directly or wrapped
+    // Based on standard OSM patterns, it's likely the root object or under 'data'
+    // Let's assume it matches OSMEvent for now, but we might need to map fields
+    return response.data;
+}
+
+export interface AggregatedMember {
+    member_id: string;
+    first_name: string;
+    last_name: string;
+    age: string;
+    patrol_id: number;
+    patrol: string;
+    active: boolean;
+    attendance: {
+        eventId: string;
+        eventName: string;
+        eventDate: string;
+        attending: string;
+        payment: string;
+    }[];
+    [key: string]: any; // Allow other member fields
+}
+
+export interface AggregatedPatrol {
+    patrolid: string;
+    name: string;
+    members: {
+        member_id: string;
+        first_name: string;
+        last_name: string;
+        age: string;
+    }[];
+    [key: string]: any;
+}
+
+export interface AggregationResult {
+    events: OSMEvent[];
+    patrols: AggregatedPatrol[];
+    members: AggregatedMember[];
+    meta: any;
+}
+
+/**
+ * Fetch aggregated summary of members, patrols, and event attendance
+ */
+export async function getMembersEventsSummary(sectionId: string, termId: string): Promise<AggregationResult> {
+    const response = await osmGet("members-events-summary", {
+        sectionId,
+        termId
+    });
+
+    if (response.error) {
+        throw new Error(response.error);
+    }
+
+    return response.data;
+}

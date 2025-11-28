@@ -88,13 +88,8 @@ export default function EventDetailPage() {
                 setAttendance(attendanceData);
 
                 // Fetch event details
-                const allEvents = await getEvents(sectionId, termId);
-                const currentEvent = allEvents.find(e => e.eventid === eventid);
-                if (currentEvent) {
-                    setEvent(currentEvent);
-                } else {
-                    setError("Event not found in current term.");
-                }
+                const eventData = await getEventDetails(sectionId, termId, eventid);
+                setEvent(eventData);
 
             } catch (err: any) {
                 console.error("Failed to fetch event details or attendance:", err);

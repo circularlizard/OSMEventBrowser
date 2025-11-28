@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAccessToken, getRefreshToken, refreshAccessToken } from "@/lib/auth";
-
-const OSM_API_BASE_URL = process.env.OSM_API_BASE_URL;
+import { callExternalOsmApi } from "@/lib/osm/server-api";
 
 /**
  * Generic proxy handler for OSM API requests
- * Handles token attachment and automatic refresh on 401
+ * Handles token attachment and automatic refresh on 401 (via callExternalOsmApi)
  */
 export async function GET(
     request: NextRequest,
@@ -40,92 +38,26 @@ async function handleOSMRequest(
     params: { path: string[] },
     method: string
 ) {
-    // Get access token
-    let accessToken = await getAccessToken();
+    // Reconstruct path from params
+    // e.g. /api/osm/ext/events/summary -> path: ["ext", "events", "summary"]
+    let apiPath = params.path.join("/");
 
-    if (!accessToken) {
-        return NextResponse.json(
-            { error: "Not authenticated" },
-            { status: 401 }
-        );
-    }
-
-    // Construct OSM API URL
-    // We use request.nextUrl.pathname to preserve trailing slashes, which are significant for OSM API
-    const pathname = request.nextUrl.pathname;
-    console.log("[Proxy Debug] Incoming Pathname:", pathname);
-
-    // Strip the "/api/osm/" prefix to get the raw path
-    let apiPath = pathname.replace(/^\/api\/osm\//, "");
-
-    // FORCE TRAILING SLASH for 'ext/' routes if missing (OSM API Requirement)
-    // e.g., "ext/events/summary" -> "ext/events/summary/"
-    if (apiPath.startsWith("ext/") && !apiPath.endsWith("/")) {
-        console.log("[Proxy Debug] Adding missing trailing slash to ext/ route");
-        apiPath += "/";
-    }
-
+    // Append query parameters
     const searchParams = request.nextUrl.searchParams.toString();
-    const osmUrl = `${OSM_API_BASE_URL}/${apiPath}${searchParams ? `?${searchParams}` : ""
-        }`;
+    if (searchParams) {
+        apiPath += `?${searchParams}`;
+    }
 
-    // Prepare request options
-    const headers: HeadersInit = {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-    };
-
-    let body: string | undefined;
+    let body: any;
     if (method !== "GET" && method !== "DELETE") {
         try {
-            const requestBody = await request.json();
-            body = JSON.stringify(requestBody);
+            body = await request.json();
         } catch {
-            // No body or invalid JSON
+            // No body
         }
     }
 
-    // Make the request to OSM API
-    console.log("[Proxy] Calling OSM API:", osmUrl);
-    console.log("[Proxy] Authorization header:", accessToken ? `Bearer ${accessToken.substring(0, 20)}...` : "MISSING");
-    let response = await fetch(osmUrl, {
-        method,
-        headers,
-        body,
-    });
-
-    // If 401, try to refresh the token and retry
-    if (response.status === 401) {
-        const refreshToken = await getRefreshToken();
-
-        if (!refreshToken) {
-            return NextResponse.json(
-                { error: "Session expired, please login again" },
-                { status: 401 }
-            );
-        }
-
-        // Attempt token refresh
-        const refreshResult = await refreshAccessToken(refreshToken);
-
-        if (!refreshResult.success) {
-            return NextResponse.json(
-                { error: "Failed to refresh token, please login again" },
-                { status: 401 }
-            );
-        }
-
-        // Retry the request with new token
-        headers.Authorization = `Bearer ${refreshResult.accessToken}`;
-        response = await fetch(osmUrl, {
-            method,
-            headers,
-            body,
-        });
-    }
-
-    // Return the response from OSM API
-    const data = await response.json();
+    const response = await callExternalOsmApi(apiPath, method, body);
 
     // Monitor rate limit headers
     const rateLimitLimit = response.headers.get("X-RateLimit-Limit");
@@ -133,34 +65,18 @@ async function handleOSMRequest(
     const rateLimitReset = response.headers.get("X-RateLimit-Reset");
 
     if (rateLimitLimit && rateLimitRemaining) {
-        console.log(
-            `[Rate Limit] ${rateLimitRemaining}/${rateLimitLimit} remaining, resets in ${rateLimitReset}s`
-        );
-
-        // Warn if approaching limit
         const remaining = parseInt(rateLimitRemaining);
         const limit = parseInt(rateLimitLimit);
+        
         if (remaining < limit * 0.1) {
-            console.warn(
-                `[Rate Limit Warning] Only ${remaining} requests remaining!`
-            );
+            console.warn(`[Rate Limit Warning] Only ${remaining} requests remaining!`);
         }
-    }
-
-    // Check for deprecation warning
-    const deprecated = response.headers.get("X-Deprecated");
-    if (deprecated) {
-        console.warn(
-            `[API Deprecation Warning] This endpoint will be removed after: ${deprecated}`
-        );
     }
 
     // Check for blocked status
     const blocked = response.headers.get("X-Blocked");
     if (blocked) {
-        console.error(
-            `[API Blocked] Application has been blocked: ${blocked}`
-        );
+        console.error(`[API Blocked] Application has been blocked: ${blocked}`);
         return NextResponse.json(
             { error: "Application has been blocked by OSM API" },
             { status: 403 }
@@ -170,9 +86,6 @@ async function handleOSMRequest(
     // Handle 429 Too Many Requests
     if (response.status === 429) {
         const retryAfter = response.headers.get("Retry-After");
-        console.error(
-            `[Rate Limit Exceeded] Retry after ${retryAfter} seconds`
-        );
         return NextResponse.json(
             {
                 error: "Rate limit exceeded",
@@ -182,7 +95,5 @@ async function handleOSMRequest(
         );
     }
 
-    const responseData = NextResponse.json(data, { status: response.status });
-    responseData.headers.set("X-Debug-Target-URL", osmUrl);
-    return responseData;
+    return NextResponse.json(response.data, { status: response.status });
 }
