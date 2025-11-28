@@ -37,12 +37,12 @@ export async function callExternalOsmApi<T = any>(
     }
 
     // Ensure trailing slash for 'ext/' routes if missing
+    // Logic: Split by '?', check base path, reassemble
     let apiPath = path;
-    if (apiPath.startsWith("ext/") && !apiPath.endsWith("/") && !apiPath.includes("?")) {
-        const [urlPath, query] = apiPath.split("?");
-        if (urlPath.startsWith("ext/") && !urlPath.endsWith("/")) {
-             apiPath = `${urlPath}/${query ? `?${query}` : ""}`;
-        }
+    const [urlPath, query] = apiPath.split("?");
+    
+    if (urlPath.startsWith("ext/") && !urlPath.endsWith("/")) {
+         apiPath = `${urlPath}/${query ? `?${query}` : ""}`;
     }
 
     const osmUrl = `${OSM_API_BASE_URL}/${apiPath}`;
