@@ -154,6 +154,22 @@ To facilitate troubleshooting without code changes, the application supports a d
     *   **Server-Side:** Validates `X-Debug-Mode: true` header from the client to enable verbose logging of payloads.
     *   **Client-Side:** The `SmartQueue` and `OsmStore` emit detailed state transition logs to the browser console when enabled.
 
+## **IX. Mock Data Strategy**
+
+To facilitate development during API blocks and enable offline testing, the application includes a configurable **Mock Mode**.
+
+### **A. Implementation**
+
+1.  **Fixtures:** Static JSON datasets stored in `src/lib/osm/mock-data.ts` representing key API responses (Startup, Events, Members, Patrols).
+2.  **Interceptor:** The `SmartQueue` (Client-Side) checks a global `mockMode` state.
+    *   **If True:** It bypasses the network and resolves the promise immediately with data from `mock-data.ts`, simulating a standard delay (e.g., 500ms).
+    *   **If False:** It proceeds with the standard queued `fetch` call.
+
+### **B. Activation**
+
+*   **Environment:** `NEXT_PUBLIC_USE_MOCK_DATA=true` in `.env.local`.
+*   **Runtime:** A toggle in the `/debug` menu or Store state.
+
 To ensure maintainability and scalability, the codebase follows specific organizational patterns.
 
 ### **A. Domain-Driven Directory Structure**

@@ -40,6 +40,10 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
     - [x] Create `/debug/diagnostics` page.
     - [x] Implement test runner that executes real API calls via the `SmartQueue` to verify rate limiting behavior.
     - [x] Display Pass/Fail status, Latency, and Payload validation.
+- [ ] **8.4: Mock Data Layer (Offline/Dev Mode)**
+    - [ ] Create `src/lib/osm/mock-data.ts` with realistic fixtures (Startup, Events, Members).
+    - [ ] Update `SmartQueue` to intercept requests when `mockMode` is enabled.
+    - [ ] Add UI toggle for Mock Mode in `/debug` or Store.
 
 ### Phase 9: Reactive UI Implementation & Migration
 - [ ] **9.0: Section Picker (Entry Point)**
