@@ -1,7 +1,7 @@
 // src/lib/store.ts
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { OSMEvent, AggregatedMember, AggregatedPatrol } from './osm/services';
 import { OSMSection, OSMTerm } from './osm/data-helpers';
 

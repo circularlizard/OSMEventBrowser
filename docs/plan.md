@@ -23,12 +23,12 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
 ## Upcoming Phases
 
 ### Phase 8: Data Engine & API Verification (API First)
-- [ ] **8.1: State Management Foundation**
-    - [ ] Install `zustand`.
-    - [ ] Define `OsmStore` interface (Normalized Events, Members, Patrols).
-    - [ ] **Multi-Section Logic:** Implement state for selecting/managing up to 3 active sections.
-    - [ ] **Debug Mode:** Implement persistent toggle (localStorage) to enable verbose logging.
-    - [ ] Create `src/lib/store.ts`.
+- [x] **8.1: State Management Foundation**
+    - [x] Install `zustand`.
+    - [x] Define `OsmStore` interface (Normalized Events, Members, Patrols).
+    - [x] **Multi-Section Logic:** Implement state for selecting/managing up to 3 active sections.
+    - [x] **Debug Mode:** Implement persistent toggle (localStorage) to enable verbose logging.
+    - [x] Create `src/lib/store.ts`.
 - [ ] **8.2: Smart Request Queue (Rate Limiting)**
     - [ ] Implement `SmartQueue` class:
         - [ ] Singleton instance.
