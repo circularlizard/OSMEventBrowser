@@ -143,7 +143,8 @@ export async function getMembersEventsSummary(sectionId: string, termId: string)
     });
 
     if (response.error) {
-        throw new Error(response.error);
+        const details = response.data?.details ? JSON.stringify(response.data.details) : "";
+        throw new Error(`${response.error} ${details}`);
     }
 
     return response.data;
