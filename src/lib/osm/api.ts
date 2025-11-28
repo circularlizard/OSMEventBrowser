@@ -20,6 +20,7 @@ export async function osmGet<T = any>(
     params?: Record<string, string>
 ): Promise<OSMApiResponse<T>> {
     const searchParams = params ? `?${new URLSearchParams(params)}` : "";
+    const response = await fetch(`/api/osm/${path}${searchParams}`);
     const data = await response.json();
 
     return {
