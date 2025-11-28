@@ -16,13 +16,13 @@ export interface ExternalOsmApiResponse<T = any> {
 export async function callExternalOsmApi<T = any>(
     path: string,
     method: string = "GET",
-    body?: any
+    body?: any,
+    customHeaders?: HeadersInit
 ): Promise<ExternalOsmApiResponse<T>> {
     let accessToken = await getAccessToken();
 
     if (!accessToken) {
-        // Try to refresh immediately if no access token but we have a refresh token?
-        // Or just fail. Typically auth middleware handles this, but here we return 401.
+        // Try to refresh immediately if no access token but we have a refresh token
         const refreshToken = await getRefreshToken();
         if (refreshToken) {
              const refresh = await refreshAccessToken(refreshToken);
@@ -39,10 +39,6 @@ export async function callExternalOsmApi<T = any>(
     // Ensure trailing slash for 'ext/' routes if missing
     let apiPath = path;
     if (apiPath.startsWith("ext/") && !apiPath.endsWith("/") && !apiPath.includes("?")) {
-        // Only add if no query params. If query params exist, we need to be careful.
-        // But typically path passed here might not have params embedded if we want to support clean composition.
-        // The proxy passed params in the URL string.
-        // Let's assume 'path' is the full relative URL including query params.
         const [urlPath, query] = apiPath.split("?");
         if (urlPath.startsWith("ext/") && !urlPath.endsWith("/")) {
              apiPath = `${urlPath}/${query ? `?${query}` : ""}`;
@@ -51,12 +47,21 @@ export async function callExternalOsmApi<T = any>(
 
     const osmUrl = `${OSM_API_BASE_URL}/${apiPath}`;
 
+    // Default headers
     const headers: HeadersInit = {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        ...customHeaders,
     };
 
-    const requestBody = body ? JSON.stringify(body) : undefined;
+    let requestBody = body;
+    
+    // Handle JSON stringification if Content-Type is application/json
+    // Check if Content-Type header is present and equals application/json
+    const contentType = (headers as Record<string, string>)["Content-Type"];
+    if (contentType === "application/json" && body && typeof body !== "string") {
+        requestBody = JSON.stringify(body);
+    }
 
     console.log(`[ServerAPI] ${method} ${osmUrl}`);
 
@@ -73,7 +78,7 @@ export async function callExternalOsmApi<T = any>(
         if (refreshToken) {
             const refreshResult = await refreshAccessToken(refreshToken);
             if (refreshResult.success) {
-                headers.Authorization = `Bearer ${refreshResult.accessToken}`;
+                (headers as Record<string, string>).Authorization = `Bearer ${refreshResult.accessToken}`;
                 response = await fetch(osmUrl, {
                     method,
                     headers,

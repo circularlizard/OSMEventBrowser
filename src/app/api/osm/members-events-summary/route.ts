@@ -31,10 +31,12 @@ export async function GET(request: NextRequest) {
         const [eventsRes, patrolsRes, membersRes] = await Promise.all([
             callExternalOsmApi(`ext/events/summary/?action=get&sectionid=${sectionId}&termid=${termId}`),
             callExternalOsmApi(`ext/members/patrols/?action=getPatrols&sectionid=${sectionId}`),
-            callExternalOsmApi(`ext/members/contact/grid/?action=getMembers`, "POST", {
-                section_id: sectionId,
-                term_id: termId
-            })
+            callExternalOsmApi(
+                `ext/members/contact/grid/?action=getMembers`, 
+                "POST", 
+                `section_id=${encodeURIComponent(sectionId)}&term_id=${encodeURIComponent(termId)}`,
+                { "Content-Type": "application/x-www-form-urlencoded" }
+            )
         ]);
 
         if (eventsRes.error || patrolsRes.error || membersRes.error) {
@@ -43,7 +45,17 @@ export async function GET(request: NextRequest) {
                 patrols: patrolsRes.error,
                 members: membersRes.error
             });
-            return NextResponse.json({ error: "Failed to fetch base data from OSM" }, { status: 502 });
+            return NextResponse.json({ 
+                error: "Failed to fetch base data from OSM", 
+                details: { 
+                    events: eventsRes.error, 
+                    patrols: patrolsRes.error, 
+                    members: membersRes.error,
+                    eventsStatus: eventsRes.status,
+                    patrolsStatus: patrolsRes.status,
+                    membersStatus: membersRes.status
+                } 
+            }, { status: 502 });
         }
 
         const events = eventsRes.data.items || [];
