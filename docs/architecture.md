@@ -89,7 +89,37 @@ All data export functionality **MUST** be handled by dedicated serverless API ro
 | **Spreadsheet** | Use a lightweight Node.js library (or simple string construction) to generate CSV or XLSX data on the server. The route must set the appropriate Content-Disposition: attachment header to trigger a download. |
 | **Data Source** | Export routes **MUST** use the API Proxy layer to fetch the necessary OSM data, ensuring the token refresh logic is applied before data retrieval. |
 
-## **V. Code Organization & Best Practices**
+## **VI. Client-Side Data Architecture (New)**
+
+To enable advanced filtering (e.g., "Show all vegetarians attending Camp") and responsive UI navigation without overloading the OSM API, the application utilizes a **Client-Side Store with Progressive Hydration**.
+
+### **A. Global State Management (Zustand)**
+
+*   **Library:** `zustand` is mandated for global state management.
+*   **Structure:** The store (`OsmStore`) acts as a local database, holding normalized data tables:
+    *   `events`: `Record<string, DetailedEvent>`
+    *   `members`: `Record<string, Member>`
+    *   `patrols`: `Record<string, Patrol>`
+    *   `metadata`: `{ sectionId, termId, lastUpdated }`
+
+### **B. Progressive Hydration Strategy**
+
+Data loading occurs in two distinct stages to balance User Experience (Speed) with API constraints (Rate Limits).
+
+1.  **Stage 1: Skeleton Load (Immediate)**
+    *   Triggered on Dashboard load or Section change.
+    *   Fetches lightweight lists in parallel:
+        *   **Patrols:** `ext/members/patrols/`
+        *   **Members:** `ext/members/contact/grid/`
+        *   **Events Summary:** `ext/events/summary/`
+    *   **Outcome:** The UI renders the full structure (lists of events, members) instantly. Detailed fields (custom questions) are initially empty.
+
+2.  **Stage 2: Detail Hydration (Background)**
+    *   A **Hydration Queue** identifies events missing detailed data.
+    *   It executes calls to `v3/events/event/{id}/summary` sequentially (or with a concurrency limit of ~3) to populate custom fields and detailed attendance.
+    *   **Outcome:** As data arrives, the UI automatically updates to show enriched information (e.g., dietary flags, exact payment status).
+
+## **VII. Code Organization & Best Practices**
 
 To ensure maintainability and scalability, the codebase follows specific organizational patterns.
 

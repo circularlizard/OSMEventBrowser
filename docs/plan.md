@@ -119,7 +119,7 @@ The OSM API enforces rate limits per authenticated user. The application must:
     - [x] Update Dashboard to display lists of members and patrols, with links to their respective detail pages.
     - [x] Update Event Details page attendance table to make member names and patrol names clickable, linking to their respective detail pages.
 
-### Phase 6.6: Stability & Optimization (Immediate) ✅
+### Phase 6.6: Stability & Optimization (Superseded by Phase 8) ✅
 - [x] **Fix Detail Page Rendering**:
     - [x] Investigate and fix rendering issues on Member, Patrol, and Event detail pages.
     - [x] Ensure data is correctly passed and displayed.
@@ -137,7 +137,27 @@ The OSM API enforces rate limits per authenticated user. The application must:
     - [x] Create smoke tests for utility functions (`data-helpers.test.ts`).
     - [x] Ensure application builds and runs without errors (Verified via `npm run build`).
 
-### Phase 8: Data Export
+### Phase 8: Client-Side Data Engine (New Architecture)
+- [ ] **State Management Setup**:
+    - [ ] Install `zustand`.
+    - [ ] Define `OsmStore` interface (Normalized Events, Members, Patrols).
+    - [ ] Create `src/lib/store.ts`.
+- [ ] **Progressive Hydration**:
+    - [ ] Implement `Stage 1` logic: Fetch Lists (Patrols, Members, Events Summary).
+    - [ ] Implement `HydrationQueue`: A background manager to fetch `v3/events/event/{id}/summary` sequentially.
+    - [ ] Connect Queue to Store: Update `events` and `members` (attendance) as requests complete.
+- [ ] **Refactor UI to Store**:
+    - [ ] **Dashboard**: Bind to `useOsmStore`. Remove direct API calls from `page.tsx`.
+    - [ ] **Event Details**: Read from Store. If empty (deep link), trigger single-event hydration.
+    - [ ] **Member/Patrol Details**: Read directly from Store (computed views).
+
+### Phase 9: Data Export
+- [ ] Implement PDF Export (`pdfkit` or `puppeteer` server-side)
+    - [ ] Event summary reports
+    - [ ] Attendance reports
+- [ ] Implement Spreadsheet Export (CSV/XLSX server-side)
+    - [ ] Event data export
+    - [ ] Member data export
 - [ ] Implement PDF Export (`pdfkit` or `puppeteer` server-side)
     - [ ] Event summary reports
     - [ ] Attendance reports
