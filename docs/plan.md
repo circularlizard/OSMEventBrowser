@@ -26,25 +26,29 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
 - [ ] **8.1: State Management Foundation**
     - [ ] Install `zustand`.
     - [ ] Define `OsmStore` interface (Normalized Events, Members, Patrols).
-    - [ ] Implement `HydrationQueue` logic (pure TS/JS class).
+    - [ ] **Multi-Section Logic:** Implement state for selecting/managing up to 3 active sections.
     - [ ] Create `src/lib/store.ts`.
-- [ ] **8.2: Engine Testing (Unit/Integration)**
-    - [ ] Write Vitest tests for `OsmStore` (mocking API responses).
-    - [ ] Verify hydration logic correctly updates state.
-    - [ ] Ensure "Skeleton" vs "Detailed" states are handled correctly.
+- [ ] **8.2: Smart Request Queue (Rate Limiting)**
+    - [ ] Implement `SmartQueue` class:
+        - [ ] Singleton instance.
+        - [ ] Task priority management.
+        - [ ] **Rate Limit Logic:** Intercept responses to read `X-RateLimit` headers.
+        - [ ] **Pause/Resume:** Automatically pause queue on 429 or low remaining limit.
+    - [ ] Connect Queue to `OsmStore` actions.
 - [ ] **8.3: API Diagnostic Harness (Live Verification)**
     - [ ] Create `/debug/diagnostics` page.
-    - [ ] Implement a test runner that executes real API calls (`getEvents`, `getMembers`, `getEventDetails`).
+    - [ ] Implement test runner that executes real API calls via the `SmartQueue` to verify rate limiting behavior.
     - [ ] Display Pass/Fail status, Latency, and Payload validation.
-    - [ ] **Goal:** Prove the backend proxy is healthy *before* building the complex UI.
 
 ### Phase 9: Reactive UI Implementation
 - [ ] **9.1: Dashboard Refactor**
+    - [ ] **Section Picker:** Implement a modal/view on startup to allow users to select up to 3 sections.
     - [ ] Connect Dashboard to `OsmStore`.
     - [ ] Remove direct API calls from `page.tsx`.
-    - [ ] Implement "Skeleton" loading state.
+    - [ ] Implement "Skeleton" loading state for the grid.
 - [ ] **9.2: Detail Views**
     - [ ] Connect Member/Patrol/Event details to Store.
+    - [ ] **Multi-Section UI:** Update views to clearly indicate which section an item belongs to (e.g., color-coded badges).
     - [ ] Implement "Live Update" visual indicators as hydration completes.
 
 ### Phase 10: Data Export

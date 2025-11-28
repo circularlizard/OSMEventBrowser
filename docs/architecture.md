@@ -89,34 +89,47 @@ All data export functionality **MUST** be handled by dedicated serverless API ro
 | **Spreadsheet** | Use a lightweight Node.js library (or simple string construction) to generate CSV or XLSX data on the server. The route must set the appropriate Content-Disposition: attachment header to trigger a download. |
 | **Data Source** | Export routes **MUST** use the API Proxy layer to fetch the necessary OSM data, ensuring the token refresh logic is applied before data retrieval. |
 
-## **VI. Client-Side Data Architecture (New)**
+## **VI. Client-Side Data Architecture**
 
-To enable advanced filtering (e.g., "Show all vegetarians attending Camp") and responsive UI navigation without overloading the OSM API, the application utilizes a **Client-Side Store with Progressive Hydration**.
+To enable advanced filtering (e.g., "Show all vegetarians attending Camp across multiple sections") and responsive UI navigation without overloading the OSM API, the application utilizes a **Client-Side Store with Progressive Hydration**.
 
 ### **A. Global State Management (Zustand)**
 
 *   **Library:** `zustand` is mandated for global state management.
+*   **Multi-Section Support:** The user may select up to **3 active sections** to load simultaneously.
 *   **Structure:** The store (`OsmStore`) acts as a local database, holding normalized data tables:
-    *   `events`: `Record<string, DetailedEvent>`
-    *   `members`: `Record<string, Member>`
-    *   `patrols`: `Record<string, Patrol>`
-    *   `metadata`: `{ sectionId, termId, lastUpdated }`
+    *   `selectedSectionIds`: `string[]` (Max 3)
+    *   `events`: `Record<string, DetailedEvent>` (Keyed by eventId)
+    *   `members`: `Record<string, Member>` (Keyed by memberId)
+    *   `patrols`: `Record<string, Patrol>` (Keyed by patrolId)
+    *   `hydrationStatus`: `{ [sectionId]: 'pending' | 'skeleton' | 'hydrating' | 'complete' }`
 
-### **B. Progressive Hydration Strategy**
+### **B. Smart Request Queue (Rate Limit Management)**
 
-Data loading occurs in two distinct stages to balance User Experience (Speed) with API constraints (Rate Limits).
+To respect OSM's strict rate limits, all background data fetching MUST go through a centralized **Smart Queue**.
+
+1.  **Centralized Control:** A singleton Queue Manager handles all non-urgent API calls (e.g., detail hydration).
+2.  **Rate Limit Monitoring:**
+    *   The Queue inspects `X-RateLimit-Remaining` and `X-RateLimit-Reset` headers on every response.
+    *   **Logic:**
+        *   If `Remaining` drops below a safety threshold (e.g., 5 requests), the Queue **PAUSES** immediately until `Reset` time.
+        *   If a `429 Too Many Requests` error is received, the Queue **PAUSES** for the duration specified in `Retry-After` (plus a buffer) before retrying the failed request.
+3.  **Concurrency:** The Queue processes requests sequentially or with very low concurrency (max 2) to ensure stability over speed.
+
+### **C. Progressive Hydration Strategy**
+
+Data loading occurs in two distinct stages:
 
 1.  **Stage 1: Skeleton Load (Immediate)**
-    *   Triggered on Dashboard load or Section change.
-    *   Fetches lightweight lists in parallel:
+    *   Triggered when the user confirms their Section selection (on startup or change).
+    *   Fetches lightweight lists for *all selected sections* in parallel:
         *   **Patrols:** `ext/members/patrols/`
         *   **Members:** `ext/members/contact/grid/`
         *   **Events Summary:** `ext/events/summary/`
-    *   **Outcome:** The UI renders the full structure (lists of events, members) instantly. Detailed fields (custom questions) are initially empty.
+    *   **Outcome:** The Dashboard renders structure immediately.
 
 2.  **Stage 2: Detail Hydration (Background)**
-    *   A **Hydration Queue** identifies events missing detailed data.
-    *   It executes calls to `v3/events/event/{id}/summary` sequentially (or with a concurrency limit of ~3) to populate custom fields and detailed attendance.
+    *   The **Smart Queue** is populated with tasks to fetch `v3/events/event/{id}/summary` for every event in the store.
     *   **Outcome:** As data arrives, the UI automatically updates to show enriched information (e.g., dietary flags, exact payment status).
 
 ## **VIII. Testing & Diagnostics Strategy**
