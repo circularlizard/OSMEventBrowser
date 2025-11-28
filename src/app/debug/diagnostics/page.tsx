@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Play, RefreshCw, CheckCircle, XCircle, Clock, Server } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { smartQueue } from "@/lib/smart-queue";
-import { getAccessToken, getRefreshToken } from "@/lib/auth"; // For auth status
 import { osmGet } from "@/lib/osm/api"; // Direct osmGet for testing proxy
 import { getDefaultSection, getCurrentTerm, extractSections, extractTermsForSection } from "@/lib/osm/data-helpers"; // For initial context
 
@@ -166,9 +165,12 @@ export default function DiagnosticsPage() {
 
         // 1. Authentication Check
         await runTest('auth_check', async () => {
-            const token = await getAccessToken();
-            if (!token) throw new Error("No access token found. Not authenticated.");
-            return { status: 200, message: "Access token found." };
+            // We cannot read the HttpOnly cookie client-side.
+            // Verification is done by hitting a protected endpoint.
+            const response = await fetch("/api/debug-startup", { method: "HEAD" });
+            if (response.status === 401) throw new Error("Not authenticated (401).");
+            if (!response.ok) throw new Error(`Auth check failed with status ${response.status}`);
+            return { status: 200, message: "Authenticated (Session Valid)" };
         });
         if (!allPassed) return; // Stop if auth fails
 
