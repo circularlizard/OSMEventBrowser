@@ -22,7 +22,7 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
 
 ## Upcoming Phases
 
-### Phase 8: Data Engine & API Verification (API First)
+### Phase 8: Data Engine & API Verification (API First) ✅
 - [x] **8.1: State Management Foundation**
     - [x] Install `zustand`.
     - [x] Define `OsmStore` interface (Normalized Events, Members, Patrols).
@@ -35,7 +35,7 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
         - [x] Task priority management.
         - [x] **Rate Limit Logic:** Intercept responses to read `X-RateLimit` headers.
         - [x] **Pause/Resume:** Automatically pause queue on 429 or low remaining limit.
-    - [x] Connect Queue to `OsmStore` actions (Implicit in next phase usage).
+    - [x] Connect Queue to `OsmStore` actions.
 - [x] **8.3: API Diagnostic Harness (Live Verification)**
     - [x] Create `/debug/diagnostics` page.
     - [x] Implement test runner that executes real API calls via the `SmartQueue` to verify rate limiting behavior.
