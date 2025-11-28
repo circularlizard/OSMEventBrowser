@@ -3,7 +3,6 @@
 import { useEffect, useState, useReducer } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator"; // Assuming you have/need a Separator
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Play, RefreshCw, CheckCircle, XCircle, Clock, Server } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -317,7 +316,7 @@ export default function DiagnosticsPage() {
                             </div>
                         )}
 
-                        <Separator />
+                        <hr className="my-4 border-t border-gray-200" />
 
                         <div className="space-y-3">
                             {state.tests.map((test) => (
