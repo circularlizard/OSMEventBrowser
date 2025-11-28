@@ -27,6 +27,7 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
     - [ ] Install `zustand`.
     - [ ] Define `OsmStore` interface (Normalized Events, Members, Patrols).
     - [ ] **Multi-Section Logic:** Implement state for selecting/managing up to 3 active sections.
+    - [ ] **Debug Mode:** Implement persistent toggle (localStorage) to enable verbose logging.
     - [ ] Create `src/lib/store.ts`.
 - [ ] **8.2: Smart Request Queue (Rate Limiting)**
     - [ ] Implement `SmartQueue` class:
@@ -40,21 +41,20 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
     - [ ] Implement test runner that executes real API calls via the `SmartQueue` to verify rate limiting behavior.
     - [ ] Display Pass/Fail status, Latency, and Payload validation.
 
-### Phase 9: Reactive UI Implementation
+### Phase 9: Reactive UI Implementation & Migration
+- [ ] **9.0: Section Picker (Entry Point)**
+    - [ ] Implement a modal/view to select up to 3 sections.
+    - [ ] **Temporary Logic:** Upon selection, redirect immediately to `/debug/diagnostics` to verify the `SmartQueue` logic against the live API.
 - [ ] **9.1: Dashboard Refactor**
-    - [ ] **Section Picker:** Implement a modal/view on startup to allow users to select up to 3 sections.
+    - [ ] Once diagnostics pass, redirect Section Picker to the main Dashboard.
     - [ ] Connect Dashboard to `OsmStore`.
-    - [ ] Remove direct API calls from `page.tsx`.
-    - [ ] Implement "Skeleton" loading state for the grid.
+    - [ ] Remove direct API calls (`getEvents`) from `page.tsx`.
 - [ ] **9.2: Detail Views**
     - [ ] Connect Member/Patrol/Event details to Store.
     - [ ] **Multi-Section UI:** Update views to clearly indicate which section an item belongs to (e.g., color-coded badges).
     - [ ] Implement "Live Update" visual indicators as hydration completes.
 
-### Phase 10: Data Export
-- [ ] Implement PDF Export (`pdfkit` or `puppeteer` server-side)
-    - [ ] Event summary reports
-    - [ ] Attendance reports
-- [ ] Implement Spreadsheet Export (CSV/XLSX server-side)
-    - [ ] Event data export
-    - [ ] Member data export
+### Exclusions (What NOT to Change)
+- **Authentication:** `src/lib/auth.ts` and OAuth callback logic remain unchanged.
+- **Server Proxy:** `src/app/api/osm/[...path]` remains unchanged (except for header forwarding if needed).
+- **Styles:** Global CSS and Tailwind config are stable.

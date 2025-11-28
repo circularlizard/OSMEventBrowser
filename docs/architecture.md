@@ -104,17 +104,18 @@ To enable advanced filtering (e.g., "Show all vegetarians attending Camp across 
     *   `patrols`: `Record<string, Patrol>` (Keyed by patrolId)
     *   `hydrationStatus`: `{ [sectionId]: 'pending' | 'skeleton' | 'hydrating' | 'complete' }`
 
-### **B. Smart Request Queue (Rate Limit Management)**
+### **B. Smart Request Queue (Client-Side Rate Limit Management)**
 
-To respect OSM's strict rate limits, all background data fetching MUST go through a centralized **Smart Queue**.
+Due to the stateless nature of Next.js Serverless functions, persistent queuing across requests is not feasible on the server without external infrastructure (Redis). Therefore, the **Client** (Zustand Store) serves as the primary throttle.
 
-1.  **Centralized Control:** A singleton Queue Manager handles all non-urgent API calls (e.g., detail hydration).
-2.  **Rate Limit Monitoring:**
-    *   The Queue inspects `X-RateLimit-Remaining` and `X-RateLimit-Reset` headers on every response.
-    *   **Logic:**
-        *   If `Remaining` drops below a safety threshold (e.g., 5 requests), the Queue **PAUSES** immediately until `Reset` time.
-        *   If a `429 Too Many Requests` error is received, the Queue **PAUSES** for the duration specified in `Retry-After` (plus a buffer) before retrying the failed request.
-3.  **Concurrency:** The Queue processes requests sequentially or with very low concurrency (max 2) to ensure stability over speed.
+1.  **Client-Side Queue (The Driver):**
+    *   A singleton `SmartQueue` class manages the hydration fetch loop.
+    *   It inspects `X-RateLimit` headers forwarded by the proxy.
+    *   **Logic:** Pauses execution if `Remaining < 5` or `429` is received.
+2.  **Server-Side Proxy (The Gatekeeper):**
+    *   **Role:** Validates tokens, proxies requests, and **forwards** all upstream `X-RateLimit` headers to the client.
+    *   **Logging:** Centralized logging of all rate limit warnings to the server console.
+    *   **Enforcement:** Returns `429` immediately if the upstream API blocks the request, preventing further abuse.
 
 ### **C. Progressive Hydration Strategy**
 
@@ -143,6 +144,15 @@ To differentiate between backend API failures and frontend rendering issues, the
     *   A dedicated `/debug/diagnostics` page serves as a system health check.
     *   It executes a sequential suite of *real* API calls to the backend proxy.
     *   It displays raw status codes, latencies, and payload samples, providing definitive proof of API connectivity independent of the main UI.
+
+### **C. Configurable Debug Logging**
+
+To facilitate troubleshooting without code changes, the application supports a dynamic debug mode.
+
+*   **Activation:** Toggled via a persistent setting in the `/debug` menu (stored in `localStorage` or cookies).
+*   **Behavior:**
+    *   **Server-Side:** Validates `X-Debug-Mode: true` header from the client to enable verbose logging of payloads.
+    *   **Client-Side:** The `SmartQueue` and `OsmStore` emit detailed state transition logs to the browser console when enabled.
 
 To ensure maintainability and scalability, the codebase follows specific organizational patterns.
 
