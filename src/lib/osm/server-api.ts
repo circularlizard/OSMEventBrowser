@@ -63,7 +63,12 @@ export async function callExternalOsmApi<T = any>(
         requestBody = JSON.stringify(body);
     }
 
-    console.log(`[ServerAPI] ${method} ${osmUrl}`);
+    const debug = process.env.NODE_ENV === "development";
+
+    if (debug) {
+        console.log(`[OSM-DEBUG] Request: ${method} ${osmUrl}`);
+        if (requestBody) console.log(`[OSM-DEBUG] Body:`, requestBody);
+    }
 
     let response = await fetch(osmUrl, {
         method,
@@ -73,7 +78,7 @@ export async function callExternalOsmApi<T = any>(
 
     // 401 Retry Logic
     if (response.status === 401) {
-        console.log("[ServerAPI] 401 received, attempting refresh...");
+        if (debug) console.log("[OSM-DEBUG] 401 Unauthorized, attempting token refresh...");
         const refreshToken = await getRefreshToken();
         if (refreshToken) {
             const refreshResult = await refreshAccessToken(refreshToken);
@@ -90,9 +95,14 @@ export async function callExternalOsmApi<T = any>(
 
     let data;
     try {
-        data = await response.json();
+        const text = await response.text();
+        if (debug) {
+            console.log(`[OSM-DEBUG] Response: ${response.status} ${response.statusText}`);
+            console.log(`[OSM-DEBUG] Response Body (First 500 chars):`, text.substring(0, 500));
+        }
+        data = text ? JSON.parse(text) : null;
     } catch (e) {
-        // Handle empty or non-JSON responses
+        console.error(`[OSM-DEBUG] JSON Parse Error:`, e);
         data = null;
     }
 

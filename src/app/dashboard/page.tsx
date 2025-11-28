@@ -84,7 +84,9 @@ export default function DashboardPage() {
             try {
                 if (activeTab === "events") {
                     // Fetch Events only (lighter)
+                    console.log("[Dashboard] Fetching events...");
                     const data = await getEvents(selectedSection.sectionId, selectedTerm.termId);
+                    console.log("[Dashboard] Events fetched:", data.length);
                     setEvents(data);
                 } else {
                     // Fetch Aggregated Data for Members/Patrols

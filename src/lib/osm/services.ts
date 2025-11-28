@@ -43,6 +43,7 @@ export interface OSMAttendance {
  * Fetch events for a specific section and term
  */
 export async function getEvents(sectionId: string, termId: string): Promise<OSMEvent[]> {
+    console.log(`[Services] Fetching events for Section: ${sectionId}, Term: ${termId}`);
     const response = await osmGet("ext/events/summary/", {
         action: "get",
         sectionid: sectionId,
@@ -50,9 +51,11 @@ export async function getEvents(sectionId: string, termId: string): Promise<OSME
     });
 
     if (response.error) {
+        console.error("[Services] getEvents error:", response.error);
         throw new Error(response.error);
     }
 
+    console.log(`[Services] getEvents raw data items count:`, response.data?.items?.length);
     return response.data?.items || [];
 }
 
