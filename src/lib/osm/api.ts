@@ -10,6 +10,7 @@ export interface OSMApiResponse<T = any> {
     data?: T;
     error?: string;
     status: number;
+    headers: Headers;
 }
 
 /**
@@ -27,6 +28,7 @@ export async function osmGet<T = any>(
         data: data,
         error: !response.ok ? data.error || "Request failed" : undefined,
         status: response.status,
+        headers: response.headers,
     };
 }
 
@@ -63,6 +65,7 @@ export async function osmPost<T = any>(
         data: response.ok ? data : undefined,
         error: !response.ok ? data.error || "Request failed" : undefined,
         status: response.status,
+        headers: response.headers,
     };
 }
 
@@ -86,6 +89,7 @@ export async function osmPut<T = any>(
         data: response.ok ? data : undefined,
         error: !response.ok ? data.error || "Request failed" : undefined,
         status: response.status,
+        headers: response.headers,
     };
 }
 
@@ -104,5 +108,6 @@ export async function osmDelete<T = any>(
         data: response.ok ? data : undefined,
         error: !response.ok ? data.error || "Request failed" : undefined,
         status: response.status,
+        headers: response.headers,
     };
 }
