@@ -11,6 +11,8 @@ import {
   type OSMTerm,
 } from "@/lib/osm/data-helpers";
 import { SectionSelector } from "@/components/osm/section-selector";
+import { SectionPicker } from "@/components/osm/section-picker";
+import { useOsmStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,6 +31,13 @@ type SortOption = "date_desc" | "date_asc" | "name_asc" | "name_desc" | "attenda
 type Tab = "events" | "members" | "patrols";
 
 export default function DashboardPage() {
+    const { selectedSectionIds } = useOsmStore();
+    
+    // If no sections are selected, show the picker
+    if (selectedSectionIds.length === 0) {
+        return <SectionPicker />;
+    }
+
     const [startupData, setStartupData] = useState<any>(null);
     const [sections, setSections] = useState<OSMSection[]>([]);
     const [selectedSection, setSelectedSection] = useState<OSMSection | null>(null);
