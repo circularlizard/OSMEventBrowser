@@ -27,8 +27,18 @@ type Action =
     | { type: 'RESET_TESTS' }
     | { type: 'SET_GLOBAL_MESSAGE'; message: string; type: 'info' | 'error' | 'success' };
 
+const initialTests: TestResult[] = [
+    { id: 'auth_check', name: 'Authentication Check', status: 'idle' },
+    { id: 'startup_data', name: 'Startup Data Fetch', status: 'idle' },
+    { id: 'get_patrols', name: 'Get Patrols', status: 'idle' },
+    { id: 'get_members', name: 'Get Members Grid (POST)', status: 'idle', message: 'Note: This fetches all members (for directory-like views). Primary hydration will use V3 event data.' },
+    { id: 'get_events_summary', name: 'Get Events Summary', status: 'idle' },
+    { id: 'get_event_details_v3', name: 'Get Event Details (v3)', status: 'idle' },
+    { id: 'members_events_summary', name: 'Aggregated Data (Members/Events)', status: 'idle' },
+];
+
 const initialState: { tests: TestResult[]; globalMessage: { message: string; type: 'info' | 'error' | 'success' } | null } = {
-    tests: [],
+    tests: initialTests,
     globalMessage: null,
 };
 
@@ -36,8 +46,9 @@ function testsReducer(state: typeof initialState, action: Action): typeof initia
     switch (action.type) {
         case 'RESET_TESTS':
             return {
-                ...initialState,
-                tests: state.tests.map(test => ({ ...test, status: 'idle', message: undefined, details: undefined, duration: undefined })),
+                ...state,
+                globalMessage: null,
+                tests: state.tests.map(test => ({ ...test, status: 'idle', message: initialTests.find(t => t.id === test.id)?.message, details: undefined, duration: undefined })),
             };
         case 'START_TESTS':
             return {
@@ -82,20 +93,6 @@ export default function DiagnosticsPage() {
     const [sectionContext, setSectionContext] = useState<{ sectionId: string; termId: string } | null>(null);
     const [allSections, setAllSections] = useState<OSMSection[]>([]);
     const [currentSectionIndex, setCurrentSectionIndex] = useState(0); // For multi-section testing
-
-    // Initialize tests definitions
-    useEffect(() => {
-        const initialTests: TestResult[] = [
-            { id: 'auth_check', name: 'Authentication Check', status: 'idle' },
-            { id: 'startup_data', name: 'Startup Data Fetch', status: 'idle' },
-            { id: 'get_patrols', name: 'Get Patrols', status: 'idle' },
-            { id: 'get_members', name: 'Get Members Grid (POST)', status: 'idle', message: 'Note: This fetches all members (for directory-like views). Primary hydration will use V3 event data.' },
-            { id: 'get_events_summary', name: 'Get Events Summary', status: 'idle' },
-            { id: 'get_event_details_v3', name: 'Get Event Details (v3)', status: 'idle' },
-            { id: 'members_events_summary', name: 'Aggregated Data (Members/Events)', status: 'idle' },
-        ];
-        dispatch({ type: 'RESET_TESTS', tests: initialTests as any }); // Cast because reducer expects state.tests, not an array
-    }, []);
 
     // Effect to set up section context
     useEffect(() => {
