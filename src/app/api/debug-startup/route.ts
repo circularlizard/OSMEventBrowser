@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/auth";
 import { parseOSMStartupData } from "@/lib/osm/parser";
-import { callExternalOsmApi } from "@/lib/osm/server-api"; // Import callExternalOsmApi
+import { callExternalOsmApi } from "@/lib/osm/server-api";
+import { mockStartupData } from "@/lib/osm/mock-data";
 
 export async function GET(request: NextRequest) {
+    // MOCK MODE: Bypass auth and return mock data
+    if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+        console.log("[Debug Startup] Serving MOCK data.");
+        return NextResponse.json({
+            status: 200,
+            url: "MOCK_MODE",
+            data: mockStartupData,
+        });
+    }
+
     const accessToken = await getAccessToken();
 
     if (!accessToken) {
