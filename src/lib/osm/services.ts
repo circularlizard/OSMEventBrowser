@@ -1,4 +1,5 @@
 import { osmGet } from "./api";
+import { smartQueue } from '../smart-queue';
 
 export interface OSMEvent {
     eventid: string;
@@ -44,7 +45,7 @@ export interface OSMAttendance {
  */
 export async function getEvents(sectionId: string, termId: string): Promise<OSMEvent[]> {
     console.log(`[Services] Fetching events for Section: ${sectionId}, Term: ${termId}`);
-    const response = await osmGet("ext/events/summary/", {
+    const response = await smartQueue.get("ext/events/summary/", {
         action: "get",
         sectionid: sectionId,
         termid: termId
@@ -63,7 +64,7 @@ export async function getEvents(sectionId: string, termId: string): Promise<OSME
  * Fetch attendance for a specific event
  */
 export async function getEventAttendance(sectionId: string, termId: string, eventId: string): Promise<OSMAttendance[]> {
-    const response = await osmGet("ext/events/event/", {
+    const response = await smartQueue.get("ext/events/event/", {
         action: "getAttendance",
         sectionid: sectionId,
         termid: termId,
@@ -81,7 +82,7 @@ export async function getEventAttendance(sectionId: string, termId: string, even
  * Fetch detailed information for a single event
  */
 export async function getEventDetails(sectionId: string, termId: string, eventId: string): Promise<OSMEvent> {
-    const response = await osmGet(`v3/events/event/${eventId}/summary`, {
+    const response = await smartQueue.get(`v3/events/event/${eventId}/summary`, {
         sectionid: sectionId,
         termid: termId
     });
@@ -137,7 +138,7 @@ export interface AggregationResult {
  * Fetch aggregated summary of members, patrols, and event attendance
  */
 export async function getMembersEventsSummary(sectionId: string, termId: string): Promise<AggregationResult> {
-    const response = await osmGet("members-events-summary", {
+    const response = await smartQueue.get("members-events-summary", {
         sectionId,
         termId
     });

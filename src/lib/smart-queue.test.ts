@@ -46,29 +46,17 @@ describe('SmartQueue', () => {
         const Module = await SmartQueueModule;
         smartQueue = new Module.SmartQueue();
 
-        // Spy on waitForNextRequest to control time
-        // We need to cast to any because it's private
         vi.spyOn(smartQueue as any, 'waitForNextRequest').mockImplementation(async () => {
-            // Just resolve immediately unless we are testing timing specifically
-            // But wait, the tests rely on timing logic inside waitForNextRequest?
-            // The tests advance timers. If we mock it to resolve immediately, we bypass the logic!
+            // We still need to use fake timers, but this spy allows us to verify it's called if needed
+            // Or simply removing it and relying on FakeTimers is better if we want to test the logic inside.
+            // The previous issue was potentially double-spying or misconfiguration.
             
-            // Correction: We should NOT mock waitForNextRequest if we want to test the logic inside it (like pausing).
-            // We should rely on vi.useFakeTimers() to fast-forward the real waitForNextRequest.
-            
-            // However, MIN_TIME_BETWEEN_REQUESTS is 100ms. Tests might be flaky if we rely on real time?
-            // No, waitForNextRequest uses setTimeout. FakeTimers handles that.
-            
-            // So: DON'T mock waitForNextRequest logic, but DO control the timers.
+            // If we want to test the logic INSIDE waitForNextRequest (rate limiting), we must NOT mock it.
+            // So let's NOT mock it, but use FakeTimers.
         });
         
-        // Wait: The previous tests mocked it to "resolve immediately".
-        // If we do that, the logic inside waitForNextRequest (checking rate limits) IS SKIPPED!
-        // That explains why "should pause..." failed (it didn't pause).
-        
-        // FIX: Remove the spy/mock on waitForNextRequest entirely. Let it run.
-        // We will use vi.useFakeTimers() to fast-forward the delays.
-        vi.restoreAllMocks(); // Restore the spy if it existed (it doesn't yet for this instance)
+        // Actually, removing the spy entirely is safer if we want to test the real logic.
+        vi.restoreAllMocks(); 
         
         vi.useFakeTimers();
     });
@@ -160,6 +148,8 @@ describe('SmartQueue', () => {
         (osmGet as vi.Mock).mockRejectedValueOnce(new Error('Network Error'));
 
         const promise = smartQueue.get('/fail');
+        // Attach error handler immediately to avoid "Unhandled Rejection"
+        const validationPromise = expect(promise).rejects.toThrow('Network Error');
 
         // Attempt 1
         await vi.advanceTimersByTimeAsync(200);
@@ -173,7 +163,7 @@ describe('SmartQueue', () => {
         // Attempt 4 (3s backoff) -> This attempt fails and should trigger the final rejection
         await vi.advanceTimersByTimeAsync(3200);
 
-        await expect(promise).rejects.toThrow('Network Error');
+        await validationPromise;
         expect(osmGet).toHaveBeenCalledTimes(4); // 1 initial + 3 retries
     });
 
@@ -181,10 +171,12 @@ describe('SmartQueue', () => {
         (osmGet as vi.Mock).mockResolvedValueOnce({ status: 401, error: 'Authentication failed after refresh.', headers: new Headers() });
 
         const promise = smartQueue.get('/authfail');
+        // Attach error handler immediately
+        const validationPromise = expect(promise).rejects.toThrow('Authentication failed after refresh.');
 
         await vi.advanceTimersByTimeAsync(200);
 
-        await expect(promise).rejects.toThrow('Authentication failed after refresh.');
+        await validationPromise;
         expect(osmGet).toHaveBeenCalledTimes(1);
     });
 

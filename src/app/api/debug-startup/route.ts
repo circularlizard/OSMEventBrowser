@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/auth";
 import { parseOSMStartupData } from "@/lib/osm/parser";
+import { callExternalOsmApi } from "@/lib/osm/server-api"; // Import callExternalOsmApi
 
 export async function GET(request: NextRequest) {
     const accessToken = await getAccessToken();
@@ -11,19 +12,21 @@ export async function GET(request: NextRequest) {
 
     try {
         const timestamp = Date.now();
-        const startupUrl = `${process.env.OSM_API_BASE_URL}/ext/generic/startup/?action=getData&client_time=${timestamp}`;
+        const apiPath = `ext/generic/startup/?action=getData&client_time=${timestamp}`;
 
-        console.log("[Debug Startup] Fetching from:", startupUrl);
+        console.log("[Debug Startup] Calling OSM API via callExternalOsmApi:", apiPath);
 
-        const response = await fetch(startupUrl, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            },
-        });
+        const response = await callExternalOsmApi(apiPath, "GET");
 
-        console.log("[Debug Startup] Response status:", response.status);
+        if (response.error || response.status >= 400 || !response.data) { // Check status for errors
+            console.error("[Debug Startup] callExternalOsmApi error:", response.error);
+            return NextResponse.json(
+                { error: response.error || "Failed to fetch startup data from OSM", details: response.data }, // include details
+                { status: response.status || 500 }
+            );
+        }
 
-        const responseText = await response.text();
+        const responseText: string = response.data; // Now callExternalOsmApi returns raw text for text/javascript
         console.log("[Debug Startup] Response text length:", responseText.length);
         console.log("[Debug Startup] First 200 chars:", responseText.substring(0, 200));
 
@@ -32,7 +35,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             status: response.status,
-            url: startupUrl,
+            url: apiPath, // Use apiPath for clarity
             responseTextLength: responseText.length,
             dataSize: JSON.stringify(data).length,
             data,
