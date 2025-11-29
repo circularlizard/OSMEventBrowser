@@ -129,109 +129,104 @@ export default function DiagnosticsPage() {
         loadContext();
     }, []);
 
+    const testRunners = useMemo(() => {
+        if (!sectionContext) return {};
+        const { sectionId, termId } = sectionContext;
+
+        return {
+            'auth_check': async () => {
+                const response = await fetch("/api/debug-startup", { method: "HEAD" });
+                if (response.status === 401) throw new Error("Not authenticated (401).");
+                if (!response.ok) throw new Error(`Auth check failed with status ${response.status}`);
+                return { status: 200, message: "Authenticated (Session Valid)" };
+            },
+            'startup_data': async () => {
+                const response = await osmGet("ext/generic/startup", { action: "getData" });
+                if (response.error || !response.data) throw new Error(response.error || "No data returned.");
+                if (!extractSections(response.data).length) throw new Error("No sections in startup data.");
+                return response;
+            },
+            'get_patrols': async () => {
+                const response = await smartQueue.get(`ext/members/patrols?action=getPatrols&sectionid=${sectionId}`);
+                if (response.error || !response.data) throw new Error(response.error || "No data returned.");
+                if (!response.data.patrols || !response.data.patrols.length) throw new Error("No patrols found in data.");
+                return response;
+            },
+            'get_members': async () => {
+                const response = await smartQueue.post(
+                    `ext/members/contact/grid/?action=getMembers`,
+                    new URLSearchParams({
+                        section_id: sectionId,
+                        term_id: termId
+                    }),
+                    { "Content-Type": "application/x-www-form-urlencoded" }
+                );
+                if (response.error || !response.data?.data?.members?.length) throw new Error(response.error || "No members data returned.");
+                return response;
+            },
+            'get_events_summary': async () => {
+                const response = await smartQueue.get(`ext/events/summary/?action=get&sectionid=${sectionId}&termid=${termId}`);
+                if (response.error || !response.data?.items?.length) throw new Error(response.error || "No events returned.");
+                return response;
+            },
+            'get_event_details_v3': async () => {
+                // We need a sample event ID. Fetch summary first if needed, or check if we have one in state?
+                // For simplicity, fetch summary again or assume sequential run? 
+                // Better: Fetch summary here strictly to get an ID.
+                const summaryRes = await smartQueue.get(`ext/events/summary/?action=get&sectionid=${sectionId}&termid=${termId}`);
+                if (!summaryRes.data?.items?.length) throw new Error("Cannot test V3: No events found in summary.");
+                const sampleEventId = summaryRes.data.items[0].eventid;
+                
+                const response = await smartQueue.get(`v3/events/event/${sampleEventId}/summary?sectionid=${sectionId}&termid=${termId}`);
+                if (response.error || !response.data?.eventid) throw new Error(response.error || "No v3 event details returned.");
+                return response;
+            },
+            'members_events_summary': async () => {
+                const response = await smartQueue.get(`members-events-summary?sectionId=${sectionId}&termId=${termId}`);
+                if (response.error || !response.data) throw new Error(response.error || "No aggregated data returned.");
+                if (!response.data.members?.length || !response.data.events?.length) throw new Error("Aggregated data missing members or events.");
+                return response;
+            }
+        };
+    }, [sectionContext]);
+
+    const executeTest = async (testId: string) => {
+        const runner = (testRunners as any)[testId];
+        if (!runner) return false;
+
+        dispatch({ type: 'TEST_RUNNING', id: testId });
+        const start = performance.now();
+        try {
+            const result = await runner();
+            const duration = performance.now() - start;
+            if (result.status && result.status >= 400 && result.status !== 401) {
+                throw new Error(`API returned status ${result.status}`);
+            }
+            dispatch({ type: 'TEST_PASSED', id: testId, duration, details: result });
+            return true;
+        } catch (error: any) {
+            const duration = performance.now() - start;
+            dispatch({ type: 'TEST_FAILED', id: testId, duration, message: error.message || "Unknown error", details: error });
+            return false;
+        }
+    };
+
     const runAllTests = async () => {
         dispatch({ type: 'START_TESTS' });
-
         if (!sectionContext) {
             dispatch({ type: 'SET_GLOBAL_MESSAGE', message: "Section context not loaded. Cannot run tests.", type: 'error' });
             return;
         }
 
-        const { sectionId, termId } = sectionContext;
         let allPassed = true;
-
-        // Helper to run a single test
-        const runTest = async (testId: string, testFn: () => Promise<any>) => {
-            dispatch({ type: 'TEST_RUNNING', id: testId });
-            const start = performance.now();
-            try {
-                const result = await testFn();
-                const duration = performance.now() - start;
-                if (result.status && result.status >= 400 && result.status !== 401) { // 401 for auth check is handled
-                    throw new Error(`API returned status ${result.status}`);
-                }
-                dispatch({ type: 'TEST_PASSED', id: testId, duration, details: result });
-                return true;
-            } catch (error: any) {
-                const duration = performance.now() - start;
+        for (const test of state.tests) {
+            const passed = await executeTest(test.id);
+            if (!passed) {
                 allPassed = false;
-                dispatch({ type: 'TEST_FAILED', id: testId, duration, message: error.message || "Unknown error", details: error });
-                return false;
+                // Optional: Stop on failure? The previous logic stopped on Auth failure.
+                if (test.id === 'auth_check') break;
             }
-        };
-
-        // --- Run Tests ---
-
-        // 1. Authentication Check
-        await runTest('auth_check', async () => {
-            // We cannot read the HttpOnly cookie client-side.
-            // Verification is done by hitting a protected endpoint.
-            const response = await fetch("/api/debug-startup", { method: "HEAD" });
-            if (response.status === 401) throw new Error("Not authenticated (401).");
-            if (!response.ok) throw new Error(`Auth check failed with status ${response.status}`);
-            return { status: 200, message: "Authenticated (Session Valid)" };
-        });
-        if (!allPassed) return; // Stop if auth fails
-
-        // 2. Startup Data - already fetched to get context, but verifies it
-        await runTest('startup_data', async () => {
-            const response = await osmGet("ext/generic/startup", { action: "getData" });
-            if (response.error || !response.data) throw new Error(response.error || "No data returned.");
-            if (!extractSections(response.data).length) throw new Error("No sections in startup data.");
-            return response;
-        });
-
-        // 3. Get Patrols
-        await runTest('get_patrols', async () => {
-            const response = await smartQueue.get(`ext/members/patrols?action=getPatrols&sectionid=${sectionId}`);
-            if (response.error || !response.data) throw new Error(response.error || "No data returned.");
-            if (!response.data.patrols || !response.data.patrols.length) throw new Error("No patrols found in data.");
-            return response;
-        });
-
-        // 4. Get Members Grid (POST)
-        await runTest('get_members', async () => {
-            const response = await smartQueue.post(
-                `ext/members/contact/grid/?action=getMembers`,
-                new URLSearchParams({
-                    section_id: sectionId,
-                    term_id: termId
-                }),
-                { "Content-Type": "application/x-www-form-urlencoded" }
-            );
-            if (response.error || !response.data?.data?.members?.length) throw new Error(response.error || "No members data returned.");
-            return response;
-        });
-        
-        // 5. Get Events Summary
-        let sampleEventId: string | undefined;
-        await runTest('get_events_summary', async () => {
-            const response = await smartQueue.get(`ext/events/summary/?action=get&sectionid=${sectionId}&termid=${termId}`);
-            if (response.error || !response.data?.items?.length) throw new Error(response.error || "No events returned.");
-            sampleEventId = response.data.items[0].eventid;
-            return response;
-        });
-
-        // 6. Get Event Details (v3) - requires sampleEventId
-        if (sampleEventId) {
-            await runTest('get_event_details_v3', async () => {
-                const response = await smartQueue.get(`v3/events/event/${sampleEventId}/summary?sectionid=${sectionId}&termid=${termId}`);
-                if (response.error || !response.data?.eventid) throw new Error(response.error || "No v3 event details returned.");
-                return response;
-            });
-        } else {
-            allPassed = false;
-            dispatch({ type: 'TEST_FAILED', id: 'get_event_details_v3', duration: 0, message: "Skipped: No sample event ID from summary fetch.", details: null });
         }
-        
-        // 7. Aggregated Data (Members/Events)
-        await runTest('members_events_summary', async () => {
-            const response = await smartQueue.get(`members-events-summary?sectionId=${sectionId}&termId=${termId}`);
-            if (response.error || !response.data) throw new Error(response.error || "No aggregated data returned.");
-            if (!response.data.members?.length || !response.data.events?.length) throw new Error("Aggregated data missing members or events.");
-            return response;
-        });
-
 
         if (allPassed) {
             dispatch({ type: 'SET_GLOBAL_MESSAGE', message: "All API diagnostics passed!", type: 'success' });
@@ -316,9 +311,19 @@ export default function DiagnosticsPage() {
                                             </p>
                                         )}
                                     </div>
-                                    <div className="flex-shrink-0 text-right">
+                                    <div className="flex-shrink-0 text-right flex items-center gap-2">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-6 w-6 p-0"
+                                            disabled={test.status === 'running' || !sectionContext}
+                                            onClick={() => executeTest(test.id)}
+                                            title="Run this test only"
+                                        >
+                                            <Play className="h-3 w-3" />
+                                        </Button>
                                         {test.duration !== undefined && (
-                                            <p className="text-xs text-muted-foreground">{test.duration.toFixed(2)} ms</p>
+                                            <p className="text-xs text-muted-foreground w-16 text-right">{test.duration.toFixed(2)} ms</p>
                                         )}
                                         <StatusBadge status={test.status} />
                                     </div>

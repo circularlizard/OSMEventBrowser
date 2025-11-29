@@ -32,7 +32,7 @@ export class SmartQueue {
     private isProcessing = false;
     private rateLimitInfo: RateLimitInfo = { limit: 1000, remaining: 1000, reset: 0 }; // Default max values
     private lastRequestTime = 0;
-    private readonly MIN_TIME_BETWEEN_REQUESTS = 100; // ms, prevent burst for safety
+    private readonly MIN_TIME_BETWEEN_REQUESTS = 1000; // ms, prevent burst for safety
     private readonly RATE_LIMIT_THRESHOLD = 5; // Start pausing if remaining hits this
 
     constructor() {
