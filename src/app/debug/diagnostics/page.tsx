@@ -190,6 +190,18 @@ export default function DiagnosticsPage() {
         };
     }, [sectionContext]);
 
+    // Helper to serialize headers for display
+    const serializeResult = (result: any) => {
+        if (result && result.headers instanceof Headers) {
+            const headersObj: Record<string, string> = {};
+            result.headers.forEach((value: string, key: string) => {
+                headersObj[key] = value;
+            });
+            return { ...result, headers: headersObj };
+        }
+        return result;
+    };
+
     const executeTest = async (testId: string) => {
         const runner = (testRunners as any)[testId];
         if (!runner) return false;
@@ -202,11 +214,13 @@ export default function DiagnosticsPage() {
             if (result.status && result.status >= 400 && result.status !== 401) {
                 throw new Error(`API returned status ${result.status}`);
             }
-            dispatch({ type: 'TEST_PASSED', id: testId, duration, details: result });
+            dispatch({ type: 'TEST_PASSED', id: testId, duration, details: serializeResult(result) });
             return true;
         } catch (error: any) {
             const duration = performance.now() - start;
-            dispatch({ type: 'TEST_FAILED', id: testId, duration, message: error.message || "Unknown error", details: error });
+            // Try to extract details from error object if available (e.g. aggregation API error)
+            const errorDetails = (error as any)?.details ? serializeResult((error as any).details) : error;
+            dispatch({ type: 'TEST_FAILED', id: testId, duration, message: error.message || "Unknown error", details: errorDetails });
             return false;
         }
     };
