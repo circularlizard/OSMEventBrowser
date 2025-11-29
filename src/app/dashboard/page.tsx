@@ -166,6 +166,9 @@ export default function DashboardPage() {
     if (selectedSectionIds.length === 0) {
         return <SectionPicker />;
     }
+
+    return (
+        <div className="flex min-h-screen w-full flex-col">
             <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-primary/50 bg-gradient-to-r from-primary to-primary/80 px-6 py-4 shadow-lg">
                 <div className="flex min-h-[40px] items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-foreground/10 text-primary-foreground">
