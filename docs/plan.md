@@ -49,10 +49,11 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
 - [x] **9.0: Section Picker (Entry Point)**
     - [x] Implement a modal/view to select up to 3 sections.
     - [x] **Temporary Logic:** Upon selection, redirect immediately to `/debug/diagnostics` to verify the `SmartQueue` logic against the live API.
-- [ ] **9.1: Dashboard Refactor**
-    - [ ] Once diagnostics pass, redirect Section Picker to the main Dashboard.
-    - [ ] Connect Dashboard to `OsmStore`.
-    - [ ] Remove direct API calls (`getEvents`) from `page.tsx`.
+- [x] **9.1: Dashboard Refactor**
+    - [x] Once diagnostics pass, redirect Section Picker to the main Dashboard.
+    - [x] Connect Dashboard to `OsmStore`.
+    - [x] Remove direct API calls (`getEvents`) from `page.tsx`.
+    - [x] Implement "Skeleton" loading state.
 - [ ] **9.2: Detail Views**
     - [ ] Connect Member/Patrol/Event details to Store.
     - [ ] **Multi-Section UI:** Update views to clearly indicate which section an item belongs to (e.g., color-coded badges).
