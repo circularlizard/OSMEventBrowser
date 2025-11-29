@@ -33,11 +33,6 @@ type Tab = "events" | "members" | "patrols";
 export default function DashboardPage() {
     const { selectedSectionIds } = useOsmStore();
     
-    // If no sections are selected, show the picker
-    if (selectedSectionIds.length === 0) {
-        return <SectionPicker />;
-    }
-
     const [startupData, setStartupData] = useState<any>(null);
     const [sections, setSections] = useState<OSMSection[]>([]);
     const [selectedSection, setSelectedSection] = useState<OSMSection | null>(null);
@@ -79,6 +74,9 @@ export default function DashboardPage() {
                     setSections(extractedSections);
 
                     const defaultSection = getDefaultSection(result.data);
+                    // Only set default if we don't have a selection yet, OR if we want to sync context.
+                    // But wait, if we show Picker, we don't need default.
+                    // If we have selectedSectionIds, we should probably load the FIRST one as context?
                     if (defaultSection) {
                         setSelectedSection(defaultSection);
                         const currentTerm = getCurrentTerm(result.data, defaultSection.sectionId);
@@ -96,7 +94,8 @@ export default function DashboardPage() {
     // Fetch Data based on Tab
     useEffect(() => {
         async function fetchData() {
-            if (!selectedSection || !selectedTerm) return;
+            // Guard: Don't fetch if no selection or context
+            if (selectedSectionIds.length === 0 || !selectedSection || !selectedTerm) return;
 
             setLoading(true);
             setError(null);
@@ -126,16 +125,8 @@ export default function DashboardPage() {
             }
         }
 
-        // Reset data when section changes
-        // But wait, if I reset data here, the useEffect might not trigger correctly if deps didn't change?
-        // Actually, I should include selectedSection/Term in deps.
-        
         fetchData();
-    }, [selectedSection, selectedTerm, activeTab]);
-
-    // Clear data when section/term changes (outside the fetch effect to avoid race conditions?)
-    // Better to handle inside fetch or use a ref to track current section.
-    // For simplicity, I'll rely on the fetch effect to overwrite.
+    }, [selectedSection, selectedTerm, activeTab, selectedSectionIds]); // Added selectedSectionIds to deps
 
     const handleSectionChange = (sectionId: string) => {
         const section = sections.find((s) => s.sectionId === sectionId);
@@ -171,8 +162,10 @@ export default function DashboardPage() {
         });
     }, [events, sortBy]);
 
-    return (
-        <div className="flex min-h-screen w-full flex-col">
+    // Conditional Render: Show Picker if no sections selected
+    if (selectedSectionIds.length === 0) {
+        return <SectionPicker />;
+    }
             <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-4 border-b border-primary/50 bg-gradient-to-r from-primary to-primary/80 px-6 py-4 shadow-lg">
                 <div className="flex min-h-[40px] items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-foreground/10 text-primary-foreground">
