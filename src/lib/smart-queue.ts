@@ -1,6 +1,7 @@
 // src/lib/smart-queue.ts
 
 import { osmGet, osmPost, osmPut, osmDelete, OSMApiResponse } from "./osm/api";
+import { mockStartupData, mockPatrols, mockEventsSummary, mockEventDetailsV3, mockAggregatedSummary } from "./osm/mock-data";
 
 // Assuming we'll have a centralized debug logger
 const debugLog = (...args: any[]) => {
@@ -30,6 +31,7 @@ interface RateLimitInfo {
 export class SmartQueue {
     private queue: QueuedRequest<any>[] = [];
     private isProcessing = false;
+    private mockMode: boolean = false; // Controls whether to use mock data
     private rateLimitInfo: RateLimitInfo = { limit: 1000, remaining: 1000, reset: 0 }; // Default max values
     private lastRequestTime = 0;
     private readonly MIN_TIME_BETWEEN_REQUESTS = 1000; // ms, prevent burst for safety
@@ -37,6 +39,50 @@ export class SmartQueue {
 
     constructor() {
         // Debug mode will be controlled via OsmStore and passed to SmartQueue calls if needed, not directly here.
+        // Check for NEXT_PUBLIC_USE_MOCK_DATA environment variable
+        if (typeof window !== 'undefined' && localStorage.getItem('osm-mock-mode') === 'true') {
+             this.mockMode = true;
+             debugLog("SmartQueue initialized in MOCK MODE via localStorage.");
+        } else if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true') {
+            this.mockMode = true;
+            debugLog("SmartQueue initialized in MOCK MODE via environment variable.");
+        }
+    }
+
+    public setMockMode(enabled: boolean) {
+        this.mockMode = enabled;
+        if (enabled) {
+            localStorage.setItem('osm-mock-mode', 'true');
+        } else {
+            localStorage.removeItem('osm-mock-mode');
+        }
+        debugLog(`Mock Mode set to: ${enabled}`);
+    }
+
+    private getMockResponse(path: string, method: string): OSMApiResponse<any> {
+        debugLog(`Serving mock data for ${method} ${path}`);
+        if (path.includes("ext/generic/startup")) {
+            const mockJsContent = `var data_holder = ${JSON.stringify(mockStartupData)};`;
+            return { status: 200, data: mockJsContent, headers: new Headers({'content-type': 'text/javascript'}) };
+        }
+        if (path.includes("ext/members/patrols")) {
+            return { status: 200, data: { patrols: mockPatrols }, headers: new Headers() };
+        }
+        if (path.includes("ext/events/summary")) {
+            return { status: 200, data: { items: mockEventsSummary }, headers: new Headers() };
+        }
+        if (path.includes("v3/events/event/mock-e1/summary")) { // Specific mock event ID
+            return { status: 200, data: mockEventDetailsV3, headers: new Headers() };
+        }
+        if (path.includes("members-events-summary")) {
+            return { status: 200, data: mockAggregatedSummary, headers: new Headers() };
+        }
+        if (path.includes("ext/members/contact/grid")) { // POST for getMembers
+            // This endpoint returns status:true and data:{members:[]}
+            return { status: 200, data: { status: true, data: { members: mockAggregatedSummary.members } }, headers: new Headers() };
+        }
+        
+        return { status: 404, error: "Mock data not found for " + path, headers: new new Headers() };
     }
 
     private updateRateLimitInfo(headers: Headers): void {
@@ -99,6 +145,18 @@ export class SmartQueue {
 
         while (this.queue.length > 0) {
             const request = this.queue[0]; // Peek at the next request
+
+            // If mock mode is enabled, intercept and return mock data
+            if (this.mockMode) {
+                debugLog(`MOCK MODE: Intercepting request for ${request.method} ${request.path}`);
+                const mockResponse = this.getMockResponse(request.path, request.method);
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 200)); 
+                
+                this.queue.shift();
+                request.resolve(mockResponse);
+                continue; // Skip actual execution
+            }
 
             await this.waitForNextRequest();
 
