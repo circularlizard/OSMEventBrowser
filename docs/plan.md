@@ -46,9 +46,9 @@ Refer to [completed-phases.md](./completed-phases.md) for the archive of Phases 
     - [ ] Add UI toggle for Mock Mode in `/debug` or Store.
 
 ### Phase 9: Reactive UI Implementation & Migration
-- [ ] **9.0: Section Picker (Entry Point)**
-    - [ ] Implement a modal/view to select up to 3 sections.
-    - [ ] **Temporary Logic:** Upon selection, redirect immediately to `/debug/diagnostics` to verify the `SmartQueue` logic against the live API.
+- [x] **9.0: Section Picker (Entry Point)**
+    - [x] Implement a modal/view to select up to 3 sections.
+    - [x] **Temporary Logic:** Upon selection, redirect immediately to `/debug/diagnostics` to verify the `SmartQueue` logic against the live API.
 - [ ] **9.1: Dashboard Refactor**
     - [ ] Once diagnostics pass, redirect Section Picker to the main Dashboard.
     - [ ] Connect Dashboard to `OsmStore`.
