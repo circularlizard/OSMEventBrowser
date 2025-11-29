@@ -46,17 +46,11 @@ describe('SmartQueue', () => {
         const Module = await SmartQueueModule;
         smartQueue = new Module.SmartQueue();
 
-        vi.spyOn(smartQueue as any, 'waitForNextRequest').mockImplementation(async () => {
-            // We still need to use fake timers, but this spy allows us to verify it's called if needed
-            // Or simply removing it and relying on FakeTimers is better if we want to test the logic inside.
-            // The previous issue was potentially double-spying or misconfiguration.
-            
-            // If we want to test the logic INSIDE waitForNextRequest (rate limiting), we must NOT mock it.
-            // So let's NOT mock it, but use FakeTimers.
-        });
-        
-        // Actually, removing the spy entirely is safer if we want to test the real logic.
-        vi.restoreAllMocks(); 
+        // Spy on waitForNextRequest to control time
+        // We need to cast to any because it's private
+        // NOTE: We are NOT replacing implementation, just spying to verify calls if needed.
+        // Actually, removing the spy entirely to rely on FakeTimers is cleaner as seen before.
+        // But if we want to avoid "not a constructor" errors, we must ensure importActual works.
         
         vi.useFakeTimers();
     });
@@ -72,12 +66,12 @@ describe('SmartQueue', () => {
         const promise1 = smartQueue.get('/path1');
         const promise2 = smartQueue.get('/path2');
 
-        // Advance time to bypass MIN_TIME_BETWEEN_REQUESTS
-        await vi.advanceTimersByTimeAsync(200); 
+        // Advance time to bypass MIN_TIME_BETWEEN_REQUESTS (1000ms)
+        await vi.advanceTimersByTimeAsync(1100); 
 
         await expect(promise1).resolves.toEqual({ status: 200, data: 'data1', headers: expect.any(Headers) });
         
-        await vi.advanceTimersByTimeAsync(200);
+        await vi.advanceTimersByTimeAsync(1100);
         
         await expect(promise2).resolves.toEqual({ status: 200, data: 'data2', headers: expect.any(Headers) });
         
@@ -94,12 +88,12 @@ describe('SmartQueue', () => {
         const promise = smartQueue.get('/path');
 
         // Process first request
-        await vi.advanceTimersByTimeAsync(200);
+        await vi.advanceTimersByTimeAsync(1100);
         
         expect(osmGet).toHaveBeenCalledTimes(1); 
 
-        // Advance by Retry-After time (2000ms) + buffer
-        await vi.advanceTimersByTimeAsync(3000);
+        // Advance by Retry-After time (2000ms) + buffer + min request time
+        await vi.advanceTimersByTimeAsync(4000);
 
         await expect(promise).resolves.toEqual({ status: 200, data: 'data', headers: expect.any(Headers) });
         expect(osmGet).toHaveBeenCalledTimes(2);
@@ -109,10 +103,8 @@ describe('SmartQueue', () => {
         const headersLowRemaining = new Headers();
         headersLowRemaining.set('X-RateLimit-Limit', '1000');
         headersLowRemaining.set('X-RateLimit-Remaining', '4'); // Below threshold (5)
-        // Reset in 10s. Use a fixed timestamp to avoid Date.now() variance in tests if possible, 
-        // but the class uses Date.now(). FakeTimers mocks Date.now() too!
-        // So:
-        const now = Date.now(); // This is the mocked time
+        // Reset in 10s.
+        const now = Date.now(); 
         headersLowRemaining.set('X-RateLimit-Reset', String(Math.floor(now / 1000) + 10)); 
 
         (osmGet as vi.Mock).mockResolvedValueOnce({ status: 200, data: 'data1', headers: headersLowRemaining });
@@ -122,7 +114,7 @@ describe('SmartQueue', () => {
         const promise2 = smartQueue.get('/path2');
 
         // Process first request
-        await vi.advanceTimersByTimeAsync(200);
+        await vi.advanceTimersByTimeAsync(1100);
 
         await expect(promise1).resolves.toEqual({ status: 200, data: 'data1', headers: headersLowRemaining });
         expect(osmGet).toHaveBeenCalledTimes(1); 
@@ -133,7 +125,7 @@ describe('SmartQueue', () => {
         await vi.advanceTimersByTimeAsync(2000);
         expect(osmGet).toHaveBeenCalledTimes(1); 
 
-        // Advance past reset time (10s + 1s buffer)
+        // Advance past reset time (10s + 1s buffer + min request time)
         await vi.advanceTimersByTimeAsync(12000);
 
         await expect(promise2).resolves.toEqual({ status: 200, data: 'data2', headers: expect.any(Headers) });
@@ -152,7 +144,7 @@ describe('SmartQueue', () => {
         const validationPromise = expect(promise).rejects.toThrow('Network Error');
 
         // Attempt 1
-        await vi.advanceTimersByTimeAsync(200);
+        await vi.advanceTimersByTimeAsync(1100);
         
         // Attempt 2 (1s backoff)
         await vi.advanceTimersByTimeAsync(1200);
@@ -174,7 +166,7 @@ describe('SmartQueue', () => {
         // Attach error handler immediately
         const validationPromise = expect(promise).rejects.toThrow('Authentication failed after refresh.');
 
-        await vi.advanceTimersByTimeAsync(200);
+        await vi.advanceTimersByTimeAsync(1100);
 
         await validationPromise;
         expect(osmGet).toHaveBeenCalledTimes(1);
@@ -191,10 +183,10 @@ describe('SmartQueue', () => {
         const pPut = smartQueue.put('/put', { key: 'value' });
         const pDelete = smartQueue.delete('/delete');
 
-        await vi.advanceTimersByTimeAsync(200);
-        await vi.advanceTimersByTimeAsync(200);
-        await vi.advanceTimersByTimeAsync(200);
-        await vi.advanceTimersByTimeAsync(200);
+        await vi.advanceTimersByTimeAsync(1100);
+        await vi.advanceTimersByTimeAsync(1100);
+        await vi.advanceTimersByTimeAsync(1100);
+        await vi.advanceTimersByTimeAsync(1100);
 
         await expect(pGet).resolves.toEqual({ status: 200, data: 'get', headers: expect.any(Headers) });
         await expect(pPost).resolves.toEqual({ status: 200, data: 'post', headers: expect.any(Headers) });
