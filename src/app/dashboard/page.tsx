@@ -1,23 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { getEvents, getMembersEventsSummary, type OSMEvent, type AggregatedMember, type AggregatedPatrol } from "@/lib/osm/services";
-import {
-  extractSections,
-  getCurrentTerm,
-  getDefaultSection,
-  type OSMSection,
-  type OSMTerm,
-} from "@/lib/osm/data-helpers";
-import { SectionSelector } from "@/components/osm/section-selector";
 import { SectionPicker } from "@/components/osm/section-picker";
 import { useOsmStore } from "@/lib/store";
+import { useHydration } from "@/hooks/use-hydration";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Link from "next/link";
-import { User, Check, X, ArrowUpDown, Users, Tent } from "lucide-react";
+import { User, Check, X, ArrowUpDown, Users, Tent, Loader2 } from "lucide-react";
 import {
     Table,
     TableBody,
@@ -31,115 +23,16 @@ type SortOption = "date_desc" | "date_asc" | "name_asc" | "name_desc" | "attenda
 type Tab = "events" | "members" | "patrols";
 
 export default function DashboardPage() {
-    const { selectedSectionIds } = useOsmStore();
+    const { selectedSectionIds, events: storeEvents, members: storeMembers, patrols: storePatrols, hydrationStatus } = useOsmStore();
+    const { isLoading, progress } = useHydration();
     
-    const [startupData, setStartupData] = useState<any>(null);
-    const [sections, setSections] = useState<OSMSection[]>([]);
-    const [selectedSection, setSelectedSection] = useState<OSMSection | null>(null);
-    const [selectedTerm, setSelectedTerm] = useState<OSMTerm | null>(null);
     const [activeTab, setActiveTab] = useState<Tab>("events");
-
-    // Data State
-    const [events, setEvents] = useState<OSMEvent[]>([]);
-    const [members, setMembers] = useState<AggregatedMember[]>([]);
-    const [patrols, setPatrols] = useState<AggregatedPatrol[]>([]);
-    
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    
-    // Event Sorting
     const [sortBy, setSortBy] = useState<SortOption>("date_desc");
 
-    // Fetch startup data on mount
-    useEffect(() => {
-        async function fetchStartupData() {
-            try {
-                const response = await fetch("/api/debug-startup");
-                
-                if (!response.ok) {
-                    const result = await response.json();
-                    if (response.status === 403 && result.error?.includes("Blocked")) {
-                        setError("OSM API Access Blocked. Please wait and try again later.");
-                    } else {
-                        setError(`Failed to load startup data: ${result.error || response.statusText}`);
-                    }
-                    return;
-                }
-
-                const result = await response.json();
-
-                if (result.data) {
-                    setStartupData(result.data);
-                    const extractedSections = extractSections(result.data);
-                    setSections(extractedSections);
-
-                    const defaultSection = getDefaultSection(result.data);
-                    // Only set default if we don't have a selection yet, OR if we want to sync context.
-                    // But wait, if we show Picker, we don't need default.
-                    // If we have selectedSectionIds, we should probably load the FIRST one as context?
-                    if (defaultSection) {
-                        setSelectedSection(defaultSection);
-                        const currentTerm = getCurrentTerm(result.data, defaultSection.sectionId);
-                        setSelectedTerm(currentTerm);
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to fetch startup data:", error);
-            }
-        }
-
-        fetchStartupData();
-    }, []);
-
-    // Fetch Data based on Tab
-    useEffect(() => {
-        async function fetchData() {
-            // Guard: Don't fetch if no selection or context
-            if (selectedSectionIds.length === 0 || !selectedSection || !selectedTerm) return;
-
-            setLoading(true);
-            setError(null);
-
-            try {
-                if (activeTab === "events") {
-                    // Fetch Events only (lighter)
-                    console.log("[Dashboard] Fetching events...");
-                    const data = await getEvents(selectedSection.sectionId, selectedTerm.termId);
-                    console.log("[Dashboard] Events fetched:", data.length);
-                    setEvents(data);
-                } else {
-                    // Fetch Aggregated Data for Members/Patrols
-                    if (members.length === 0 || patrols.length === 0) { // Only fetch if empty? No, should re-fetch on section change
-                         const summary = await getMembersEventsSummary(selectedSection.sectionId, selectedTerm.termId);
-                         setMembers(summary.members);
-                         setPatrols(summary.patrols);
-                         // Also update events if we have them from summary
-                         setEvents(summary.events);
-                    }
-                }
-            } catch (err: any) {
-                console.error(`Failed to fetch ${activeTab}:`, err);
-                setError(err.message || "Failed to load data");
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchData();
-    }, [selectedSection, selectedTerm, activeTab, selectedSectionIds]); // Added selectedSectionIds to deps
-
-    const handleSectionChange = (sectionId: string) => {
-        const section = sections.find((s) => s.sectionId === sectionId);
-        if (section && startupData) {
-            setSelectedSection(section);
-            const currentTerm = getCurrentTerm(startupData, sectionId);
-            setSelectedTerm(currentTerm);
-            // Clear data to force refresh
-            setEvents([]);
-            setMembers([]);
-            setPatrols([]);
-        }
-    };
+    // Derived Data Arrays
+    const events = useMemo(() => Object.values(storeEvents), [storeEvents]);
+    const members = useMemo(() => Object.values(storeMembers), [storeMembers]);
+    const patrols = useMemo(() => Object.values(storePatrols), [storePatrols]);
 
     const handleLogout = async () => {
         await fetch("/api/logout", { method: "POST" });
@@ -198,29 +91,13 @@ export default function DashboardPage() {
             </header>
 
             <main className="flex flex-1 flex-col gap-6 p-8">
-                {/* Section Selection */}
-                <div className="flex items-center justify-between rounded-lg border bg-card p-4 shadow-sm">
-                    <div className="flex flex-1 items-center gap-4">
-                        <label className="text-sm font-medium whitespace-nowrap">Select Section:</label>
-                        <div className="w-full max-w-xs">
-                            <SectionSelector
-                                sections={sections}
-                                selectedSectionId={selectedSection?.sectionId || null}
-                                onSectionChange={handleSectionChange}
-                            />
-                        </div>
-                        {selectedSection && (
-                            <div className="text-xs text-muted-foreground hidden md:block">
-                                ID: <code className="bg-muted px-1 py-0.5 rounded">{selectedSection.sectionId}</code>
-                            </div>
-                        )}
+                {/* Loading Indicator */}
+                {isLoading && (
+                    <div className="flex items-center gap-2 p-4 bg-blue-50 text-blue-700 rounded-lg">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm font-medium">Hydrating data... {progress}%</span>
                     </div>
-                    {selectedTerm && (
-                        <div className="text-sm text-muted-foreground">
-                            Current Term: <span className="font-medium text-foreground">{selectedTerm.name}</span>
-                        </div>
-                    )}
-                </div>
+                )}
 
                 {/* Tabs */}
                 <div className="flex gap-2 border-b pb-2">
@@ -230,6 +107,7 @@ export default function DashboardPage() {
                         className="gap-2"
                     >
                         <Users className="h-4 w-4" /> Events
+                        <Badge variant="secondary" className="ml-1 text-xs">{events.length}</Badge>
                     </Button>
                     <Button 
                         variant={activeTab === "members" ? "default" : "ghost"} 
@@ -237,6 +115,7 @@ export default function DashboardPage() {
                         className="gap-2"
                     >
                         <User className="h-4 w-4" /> Members
+                        <Badge variant="secondary" className="ml-1 text-xs">{members.length}</Badge>
                     </Button>
                     <Button 
                         variant={activeTab === "patrols" ? "default" : "ghost"} 
@@ -244,103 +123,120 @@ export default function DashboardPage() {
                         className="gap-2"
                     >
                         <Tent className="h-4 w-4" /> Patrols
+                        <Badge variant="secondary" className="ml-1 text-xs">{patrols.length}</Badge>
                     </Button>
                 </div>
 
                 {/* Content */}
-                {loading ? (
-                    <div className="text-sm text-muted-foreground text-center py-10">Loading data...</div>
-                ) : error ? (
-                    <div className="text-sm text-destructive text-center py-10">{error}</div>
-                ) : (
-                    <>
-                        {/* Events View */}
-                        {activeTab === "events" && (
-                            <div className="space-y-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div className="flex items-baseline gap-2">
-                                        <h2 className="text-xl font-semibold text-primary">Events</h2>
-                                        <div className="text-sm text-muted-foreground">{sortedEvents.length} events found</div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</span>
-                                        <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                                            <SelectTrigger className="w-[180px]">
-                                                <SelectValue placeholder="Sort by..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="date_desc">Date (Newest First)</SelectItem>
-                                                <SelectItem value="date_asc">Date (Oldest First)</SelectItem>
-                                                <SelectItem value="name_asc">Name (A-Z)</SelectItem>
-                                                <SelectItem value="name_desc">Name (Z-A)</SelectItem>
-                                                <SelectItem value="attendance_desc">Most Attendees</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                <>
+                    {/* Events View */}
+                    {activeTab === "events" && (
+                        <div className="space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div className="flex items-baseline gap-2">
+                                    <h2 className="text-xl font-semibold text-primary">Events</h2>
+                                    <div className="text-sm text-muted-foreground">
+                                        Showing events from {selectedSectionIds.length} section(s)
                                     </div>
                                 </div>
-
-                                {sortedEvents.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground">No events found for this term.</div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {sortedEvents.map((event) => (
-                                            <Link 
-                                                key={event.eventid} 
-                                                href={`/dashboard/events/${event.eventid}?sectionId=${selectedSection?.sectionId}&termId=${selectedTerm?.termId}`} 
-                                                passHref
-                                            >
-                                                <Card className="h-full cursor-pointer transition-all hover:shadow-md hover:border-primary/50">
-                                                    <CardHeader className="pb-3">
-                                                        <div className="flex justify-between items-start gap-2">
-                                                            <CardTitle className="text-lg font-bold leading-tight text-primary">{event.name}</CardTitle>
-                                                            <Badge variant="outline" className="shrink-0 bg-primary/5 border-primary/20 text-primary">{event.startdate}</Badge>
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground truncate">{event.location || "No location specified"}</div>
-                                                    </CardHeader>
-                                                    <CardContent>
-                                                        <div className="grid grid-cols-3 gap-2 text-sm">
-                                                            <div className="flex flex-col items-center justify-center rounded-md bg-blue-50 p-2 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
-                                                                <div className="flex items-center gap-1 mb-1"><User className="h-4 w-4" /><span className="font-semibold text-xs uppercase opacity-70">Invited</span></div>
-                                                                <span className="text-lg font-bold">{event.invited}</span>
-                                                            </div>
-                                                            <div className="flex flex-col items-center justify-center rounded-md bg-green-50 p-2 text-green-700 dark:bg-green-900/20 dark:text-green-300">
-                                                                <div className="flex items-center gap-1 mb-1"><Check className="h-4 w-4" /><span className="font-semibold text-xs uppercase opacity-70">Yes</span></div>
-                                                                <span className="text-lg font-bold">{event.yes}</span>
-                                                            </div>
-                                                            <div className="flex flex-col items-center justify-center rounded-md bg-red-50 p-2 text-red-700 dark:bg-red-900/20 dark:text-red-300">
-                                                                <div className="flex items-center gap-1 mb-1"><X className="h-4 w-4" /><span className="font-semibold text-xs uppercase opacity-70">No</span></div>
-                                                                <span className="text-lg font-bold">{event.no}</span>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            </Link>
-                                        ))}
-                                    </div>
-                                )}
+                                
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground whitespace-nowrap">Sort by:</span>
+                                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue placeholder="Sort by..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="date_desc">Date (Newest First)</SelectItem>
+                                            <SelectItem value="date_asc">Date (Oldest First)</SelectItem>
+                                            <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+                                            <SelectItem value="name_desc">Name (Z-A)</SelectItem>
+                                            <SelectItem value="attendance_desc">Most Attendees</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                        )}
 
-                        {/* Members View */}
-                        {activeTab === "members" && (
-                            <div className="space-y-4">
-                                <h2 className="text-xl font-semibold text-primary">Members ({members.length})</h2>
-                                <div className="rounded-md border bg-card">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Name</TableHead>
-                                                <TableHead>Age</TableHead>
-                                                <TableHead>Patrol</TableHead>
-                                                <TableHead>Status</TableHead>
-                                            </TableRow>
+                            {sortedEvents.length === 0 && !isLoading ? (
+                                <div className="text-sm text-muted-foreground">No events found.</div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {sortedEvents.map((event) => (
+                                        <Link 
+                                            key={event.eventid} 
+                                            href={`/dashboard/events/${event.eventid}?sectionId=${event.sectionid}`} 
+                                            passHref
+                                        >
+                                            <Card className="h-full cursor-pointer transition-all hover:shadow-md hover:border-primary/50">
+                                                <CardHeader className="pb-3">
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <CardTitle className="text-lg font-bold leading-tight text-primary">
+                                                            {event.name}
+                                                        </CardTitle>
+                                                        <Badge variant="outline" className="shrink-0 bg-primary/5 border-primary/20 text-primary">
+                                                            {event.startdate}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground truncate">
+                                                        {event.location || "No location specified"}
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="grid grid-cols-3 gap-2 text-sm">
+                                                        <div className="flex flex-col items-center justify-center rounded-md bg-blue-50 p-2 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                                                            <div className="flex items-center gap-1 mb-1">
+                                                                <User className="h-4 w-4" />
+                                                                <span className="font-semibold text-xs uppercase opacity-70">Invited</span>
+                                                            </div>
+                                                            <span className="text-lg font-bold">{event.invited}</span>
+                                                        </div>
+                                                        <div className="flex flex-col items-center justify-center rounded-md bg-green-50 p-2 text-green-700 dark:bg-green-900/20 dark:text-green-300">
+                                                            <div className="flex items-center gap-1 mb-1">
+                                                                <Check className="h-4 w-4" />
+                                                                <span className="font-semibold text-xs uppercase opacity-70">Yes</span>
+                                                            </div>
+                                                            <span className="text-lg font-bold">{event.yes}</span>
+                                                        </div>
+                                                        <div className="flex flex-col items-center justify-center rounded-md bg-red-50 p-2 text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                                                            <div className="flex items-center gap-1 mb-1">
+                                                                <X className="h-4 w-4" />
+                                                                <span className="font-semibold text-xs uppercase opacity-70">No</span>
+                                                            </div>
+                                                            <span className="text-lg font-bold">{event.no}</span>
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Members View */}
+                    {activeTab === "members" && (
+                        <div className="space-y-4">
+                            <h2 className="text-xl font-semibold text-primary">Members ({members.length})</h2>
+                            <div className="rounded-md border bg-card">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Age</TableHead>
+                                            <TableHead>Patrol</TableHead>
+                                            <TableHead>Status</TableHead>
                                         </TableHeader>
-                                        <TableBody>
-                                            {members.map((member) => (
+                                    </TableHeader>
+                                    <TableBody>
+                                        {members.length === 0 ? (
+                                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No members loaded yet (Wait for Hydration Phase 2).</TableCell></TableRow>
+                                        ) : (
+                                            members.map((member) => (
                                                 <TableRow key={member.member_id}>
                                                     <TableCell>
                                                         <Link 
-                                                            href={`/dashboard/members/${member.member_id}?sectionId=${selectedSection?.sectionId}&termId=${selectedTerm?.termId}`}
+                                                            href={`/dashboard/members/${member.member_id}`}
                                                             className="hover:underline text-primary font-medium"
                                                         >
                                                             {member.first_name} {member.last_name}
@@ -350,41 +246,41 @@ export default function DashboardPage() {
                                                     <TableCell>{member.patrol}</TableCell>
                                                     <TableCell>{member.active ? <Badge variant="outline">Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {/* Patrols View */}
-                        {activeTab === "patrols" && (
-                            <div className="space-y-4">
-                                <h2 className="text-xl font-semibold text-primary">Patrols ({patrols.length})</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                    {patrols.map((patrol) => (
-                                        <Link 
-                                            key={patrol.patrolid}
-                                            href={`/dashboard/patrols/${patrol.patrolid}?sectionId=${selectedSection?.sectionId}&termId=${selectedTerm?.termId}`}
-                                        >
-                                            <Card className="hover:shadow-md transition-all cursor-pointer">
-                                                <CardHeader>
-                                                    <CardTitle>{patrol.name}</CardTitle>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        <Users className="inline h-4 w-4 mr-1" />
-                                                        {patrol.members.length} Members
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </Link>
-                                    ))}
-                                </div>
+                    {/* Patrols View */}
+                    {activeTab === "patrols" && (
+                        <div className="space-y-4">
+                            <h2 className="text-xl font-semibold text-primary">Patrols ({patrols.length})</h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {patrols.map((patrol) => (
+                                    <Link 
+                                        key={patrol.patrolid}
+                                        href={`/dashboard/patrols/${patrol.patrolid}`}
+                                    >
+                                        <Card className="hover:shadow-md transition-all cursor-pointer">
+                                            <CardHeader>
+                                                <CardTitle>{patrol.name}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="text-sm text-muted-foreground">
+                                                    <Users className="inline h-4 w-4 mr-1" />
+                                                    {patrol.members.length} Members
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                ))}
                             </div>
-                        )}
-                    </>
-                )}
+                        </div>
+                    )}
+                </>
             </main>
         </div>
     );
